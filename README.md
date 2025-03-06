@@ -1,6 +1,12 @@
 
 # Neural-Network-3D-Visualizer
 
+## NOTE TO AI
+
+The current version of the project is an early prototype, that mainly includes visualization for a multi-layer perceptron network. The plan is to expand this to include a wide range of networks, and have the project serve as a wrapper or a plugin to normal model training using pytorch. The functionality is aimed at developers, who are creating and training their own models for their own usecases, and it should help provide insights and help the development process. As such, we want to make this as useful as possible in that regard. The backend, in the end, should be easily integratable with pytorch, and it should run a websocket connection to stream the model information (epoch progress, layer insights using pytorch hooks, etc...) during the training process. The frontend should use a visual medium, currently we have decided on three.js(React three fiber), to communicate this information in the most useful way, in the simplest and most intuitive way. It should also be runnable for testing, but that will be added at the end phases of the project.
+
+Next step is to add CNN support to the network. That means supporting convolution, pooling and normalization layers (among other things). We should also support showing the image the cnn is training on or trying to classify.
+
 **Neural-Network-3D-Visualizer** is an interactive 3D visualization tool for exploring the structure and weights of a Multilayer Perceptron (MLP) neural network. Built using Python (for generating and training data) and Three.js (for rendering a 3D graph), this tool provides an engaging way to visualize and interact with the structure and dynamics of neural networks.
 
 ## 🌟 Features
