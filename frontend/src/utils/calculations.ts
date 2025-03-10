@@ -1,6 +1,5 @@
-import { LayerData } from "../components/types";
+import { MLPLayerData } from "../components/types";
 
-// Original calculation for MLP data structure
 export const calculateNeuronPositions = (
   layerSizes: number[], // Sizes of each layer in the network
   width: number,        // Width of the container
@@ -42,7 +41,7 @@ export const calculateNeuronPositions = (
 
 // Legacy calculation method for backward compatibility
 export const calculateNeuronPositionsLegacy = (
-  mlpData: LayerData[],
+  mlpData: MLPLayerData[],
   layerSpacing: number,
   neuronSpacing: number
 ): [number, number, number][][] => {

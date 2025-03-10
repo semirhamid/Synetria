@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class SimpleCNN(nn.Module):
-    def __init__(self, in_channels, num_classes=10):
+    def __init__(self, in_channels=3, num_classes=10):
         super(SimpleCNN, self).__init__()
 
         self.conv1 = nn.Conv2d(

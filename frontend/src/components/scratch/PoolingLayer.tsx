@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PoolingLayerData } from './types';
+import { PoolingLayerData } from '../types';
 import FeatureMap from './FeatureMap';
 
 interface PoolingLayerProps {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { FeatureMapData } from './types';
+import { FeatureMapData } from '../types';
 
 interface FeatureMapProps {
   featureMap: FeatureMapData;

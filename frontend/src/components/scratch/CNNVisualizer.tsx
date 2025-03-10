@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { TrainingData, ModelStructure, ModelMetaData } from './types';
+import { TrainingData, ModelStructure, ModelMetaData } from '../types';
 import ConvolutionalLayer from './ConvolutionalLayer';
 import PoolingLayer from './PoolingLayer';
 import InputImage from './InputImage';
-import LoadingComponent from './LoadingComponent';
+import LoadingComponent from '../LoadingComponent';
 
 interface CNNVisualizerProps {
   trainingData: TrainingData | null;

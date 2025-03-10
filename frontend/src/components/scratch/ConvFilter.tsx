@@ -1,5 +1,5 @@
 import React from 'react';
-import { ConvFilterData } from './types';
+import { ConvFilterData } from '../types';
 
 interface ConvFilterProps {
   filter: ConvFilterData;

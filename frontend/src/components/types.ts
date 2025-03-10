@@ -1,5 +1,5 @@
 // Types
-export interface LayerData {
+export interface MLPLayerData {
   layer: string;
   weights: number[][];
   biases: number[];
@@ -56,7 +56,7 @@ export interface TrainingData {
   batch_size: number;
   learning_rate: number;
   loss: number;
-  layers: LayerData[];
+  layers: MLPLayerData[];
   conv_layers?: ConvLayerData[];
   pooling_layers?: PoolingLayerData[];
   input_image?: number[][][]; // For storing the original input image

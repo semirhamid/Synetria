@@ -69,8 +69,8 @@ def load_cnn_example():
 
     # print("inputs: ", len(inputs))
 
-    model = LeNetBasedModel()
-    # model = LenetBasedCNN(in_channels=1, num_classes=len(mnist_dataset.classes))
+    # model = LeNetBasedModel()
+    model = LeNetBasedModel(in_channels=3, num_classes=len(mnist_dataset.classes))
 
     # dataset = TensorDataset(inputs, targets)
     train_loader = DataLoader(mnist_dataset, batch_size=64, shuffle=True)

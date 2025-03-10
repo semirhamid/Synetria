@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
-  LayerData,
+  MLPLayerData,
   ModelMetaData,
   ModelStructure,
   TrainingData,
 } from './types';
-import Node from './Node';
-import Edge from './Edge';
+import Node from './networkLayers/dense/Node';
+import Edge from './networkLayers/dense/Edge';
 import {
   DEFAULT_LAYER_SPACING,
   DEFAULT_NEURON_SPACING,
@@ -15,10 +15,10 @@ import {
 } from '../constants';
 import { calculateNeuronPositions } from '../utils/calculations';
 import LoadingComponent from './LoadingComponent';
-import CNNVisualizer from './CNNVisualizer';
+import TensorFlow3DCNN from './CNN3D';
 
 const NeuralNetwork: React.FC = () => {
-  const [mlpData, setMlpData] = useState<LayerData[] | null>(null);
+  const [mlpData, setMlpData] = useState<MLPLayerData[] | null>(null);
   const [modelMetadata, setModelMetadata] = useState<ModelStructure | null>(
     null
   );
@@ -38,7 +38,7 @@ const NeuralNetwork: React.FC = () => {
     socket.onopen = () => console.log('WebSocket connection established');
     socket.onmessage = (event) => {
       const receivedData: TrainingData = JSON.parse(event.data);
-      console.log(receivedData);
+      console.log("Incoming data: ", receivedData);
       
       setTrainingData(receivedData);
 
@@ -79,7 +79,7 @@ const NeuralNetwork: React.FC = () => {
 
   // Decide which visualizer to show based on model type
   if (visualizationType === 'cnn') {
-    return <CNNVisualizer trainingData={trainingData} />;
+    return <TensorFlow3DCNN trainingData={trainingData} />;
   }
 
   // MLP visualization (original)

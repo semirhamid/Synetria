@@ -4,7 +4,7 @@ import json
 import asyncio
 import websockets
 import numpy as np
-from typing import Dict, List, Any, Tuple, Optional
+from typing import Dict, List, Any, Tuple
 
 
 class Trainer:
@@ -21,6 +21,7 @@ class Trainer:
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model = model.to(device)
+        print("Device: ", device)
 
         # Training loop
         for epoch in range(num_epochs):
@@ -127,6 +128,7 @@ class Trainer:
         self, model, inputs
     ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
         """Perform forward pass while capturing layer activations."""
+        # Should be extended to use more advanced techniques than just capturing activations, such as gradcam, ...
 
         activations = {}
         hooks = []

@@ -33,6 +33,16 @@ The backend is built as a wrapper around PyTorch models, designed to be minimall
      - Pooling layers (MaxPool2D, AvgPool2D)
    - Extensible architecture for adding new layer types
 
+#### To run the backend
+
+```
+   cd backend
+   python ./main.py
+```
+
+Currently, the backend server runs first, and upon connection, runs the training (it's how semir implemented it). This means a connection is necessary for the model training to run.
+This will need to change. Make the trainer run, which will spin up a websocket and send the progress thru it. if there is no connection established, it should still proceed
+
 ### Frontend (React/TypeScript)
 
 The frontend provides an interactive visualization environment built with React and Three.js. Components include:
@@ -54,6 +64,17 @@ The frontend provides an interactive visualization environment built with React 
    - Layer navigation
    - Training metadata display
    - Color-coded weights and activations
+
+#### To run the frontend
+
+```
+
+   cd frontend
+   npm install
+   npm run dev
+```
+
+Ngl, most of the cnn code is done with ai, and i think i temporarily broke the dense visualization for now. this needs more work and fixes later.
 
 ## Implementation Details
 

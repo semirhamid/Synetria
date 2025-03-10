@@ -1,8 +1,6 @@
 
 # Neural-Network-3D-Visualizer
 
-## NOTE TO AI
-
 The current version of the project is an early prototype, that mainly includes visualization for a multi-layer perceptron network. The plan is to expand this to include a wide range of networks, and have the project serve as a wrapper or a plugin to normal model training using pytorch. The functionality is aimed at developers, who are creating and training their own models for their own usecases, and it should help provide insights and help the development process. As such, we want to make this as useful as possible in that regard. The backend, in the end, should be easily integratable with pytorch, and it should run a websocket connection to stream the model information (epoch progress, layer insights using pytorch hooks, etc...) during the training process. The frontend should use a visual medium, currently we have decided on three.js(React three fiber), to communicate this information in the most useful way, in the simplest and most intuitive way. It should also be runnable for testing, but that will be added at the end phases of the project.
 
 Next step is to add CNN support to the network. That means supporting convolution, pooling and normalization layers (among other things). We should also support showing the image the cnn is training on or trying to classify.
@@ -23,7 +21,6 @@ Next step is to add CNN support to the network. That means supporting convolutio
   A large rendering space for exploring and interacting with even the most complex network structures.  
 ![image](https://github.com/user-attachments/assets/a0cd7dd6-7612-40ce-a3fd-ae1626d7653d)
 
-
 ---
 
 ## 🗂️ Project Structure
@@ -31,9 +28,12 @@ Next step is to add CNN support to the network. That means supporting convolutio
 The repository is organized into **backend** and **frontend** directories to separate concerns:
 
 ### **Backend**  
+
 Contains the core logic for defining and training the neural network using PyTorch and for handling server-side communication:  
+
 - **`models/`**  
   - `simple_nn.py`: Implements a simple feedforward neural network using PyTorch.  
+
     ```python
     import torch
     import torch.nn as nn
@@ -51,6 +51,7 @@ Contains the core logic for defining and training the neural network using PyTor
             x = self.fc3(x)
             return x
     ```
+
 - **`services/`**  
   - `model_service.py`: Provides APIs for training and predicting with the neural network.  
   - `trainer.py`: Handles the training logic for the MLP model.  
@@ -62,8 +63,10 @@ Contains the core logic for defining and training the neural network using PyTor
   - `client_handler.py`: Manages WebSocket communication between the backend and frontend.  
   - `server.py`: Runs the WebSocket server to enable real-time updates.
 
-### **Frontend**  
+### **Frontend**
+
 Focuses on rendering the 3D visualization and enabling user interactions:  
+
 - **`assets/`**  
   - Houses resources like stylesheets and configuration files.  
 
@@ -80,18 +83,18 @@ Focuses on rendering the 3D visualization and enabling user interactions:
   - `constants.ts`: Contains reusable constants for the application.  
 
 ### Additional Files
+
 - **`vite.config.ts`**: Configuration for Vite, the frontend build tool.  
 - **`tailwind.config.js`**: Tailwind CSS configuration for styling.  
 - **`requirements.txt`**: Lists Python dependencies for the backend.  
 - **`package.json`**: Contains dependencies and scripts for the frontend.  
 
-
 ## API Contract: WebSocket Training Data Payload
 
 This document outlines the structure and rules for the WebSocket payload sent during the training process. Developers can use this information to extend the functionality of the system without breaking existing features.
 
-
 ### **Payload Overview**
+
 The WebSocket sends a JSON object for each training step, containing metadata about the training process, model structure, and layer details. This payload is structured as follows:
 
 ```json
@@ -124,26 +127,35 @@ The WebSocket sends a JSON object for each training step, containing metadata ab
 }
 
 ```
+
 ---
 
 ## 🚀 How to Run
 
 ### Backend
+
 1. Install dependencies:
+
    ```bash
    pip install -r requirements.txt
    ```
+
 2. Run the WebSocket server:
+
    ```bash
    python main.py
    ```
 
 ### Frontend
+
 1. Install dependencies:
+
    ```bash
    yarn install
    ```
+
 2. Start the development server:
+
    ```bash
    yarn dev
    ```

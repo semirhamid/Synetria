@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ConvLayerData } from './types';
+import { ConvLayerData } from '../types';
 import ConvFilter from './ConvFilter';
 import FeatureMap from './FeatureMap';
 

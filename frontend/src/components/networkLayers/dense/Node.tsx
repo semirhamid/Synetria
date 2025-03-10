@@ -64,7 +64,7 @@ const Node: React.FC<NodeProps> = ({
         onPointerOver={() => setHovered(true)} // Handle hover start
         onPointerOut={() => setHovered(false)} // Handle hover end
       >
-        <meshStandardMaterial color={biasColor} />
+        <meshBasicMaterial color={biasColor} />
         {hovered && bias !== null && (
           <Html
             position={[0, 0, biasSize + 0.1]} // Position the tooltip slightly above the node
