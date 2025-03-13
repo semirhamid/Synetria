@@ -1,41 +1,33 @@
 // Types
-export interface MLPLayerData {
-  layer: string;
+export interface LayerData {
+  layer_name: string;
+  type: string;
+
+  // linear layer data
   weights: number[][];
   biases: number[];
-}
+  activations: number[];
 
-// CNN-specific interfaces
-export interface ConvFilterData {
-  filter_id: number;
-  channel: number;
-  filter_weights: number[][];
-}
+  // conv layer data
+  filters?: number[][][][]; // [filter_index][in_channel][height][width]
+  kernel_size?: [number, number];
+  stride?: [number, number];
+  padding?: [number, number];
+  in_channels?: number;
+  out_channels?: number;
 
-export interface FeatureMapData {
-  channel_id: number;
-  activation_map: number[][];
-}
+  // feature maps (activations)
+  feature_maps?: number[][][]; // [channel][height][width]
 
-export interface ConvLayerData {
-  layer_name: string;
-  filters: ConvFilterData[];
-  feature_maps: FeatureMapData[];
-  kernel_size: number[];
-  stride: number[];
-  padding: number[];
-  input_shape: number[];
-  output_shape: number[];
-}
+  // pooling layer data
+  pool_size?: [number, number];
+  pool_stride?: [number, number];
+  pool_padding?: [number, number];
+  pool_type?: 'max' | 'avg';
 
-export interface PoolingLayerData {
-  layer_name: string;
-  pool_type: string; // 'max', 'avg', etc.
-  kernel_size: number[];
-  stride: number[];
-  input_shape: number[];
-  output_shape: number[];
-  feature_maps: FeatureMapData[];
+  // input data (for visualization)
+  input_shape?: number[];
+  output_shape?: number[];
 }
 
 export interface ModelStructure {
@@ -44,22 +36,19 @@ export interface ModelStructure {
   total_params: number;
   layer_details: {
     layer_name: string;
-    layer_type: string; // 'conv', 'pool', 'linear', etc.
-    input_size: number | number[];
-    output_size: number | number[];
+    input_size: number;
+    output_size: number;
   }[];
 }
 
 export interface TrainingData {
   epoch: number;
   batch: number;
+  hyperparameters: Map<string, number> // total_epochs, learning_rate, batch_size
   batch_size: number;
   learning_rate: number;
   loss: number;
-  layers: MLPLayerData[];
-  conv_layers?: ConvLayerData[];
-  pooling_layers?: PoolingLayerData[];
-  input_image?: number[][][]; // For storing the original input image
+  layers: LayerData[];
   model_structure: ModelStructure;
 }
 

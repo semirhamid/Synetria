@@ -1,5 +1,6 @@
 import React from 'react';
 import NeuralNetwork from './components/NeuralNetwork';
+// import NeuralNetwork from './components/scratch/NeuralNetwork_legacy';
 import './index.css';
 import ErrorBoundary from './components/ErrorBoundary';
 

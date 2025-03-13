@@ -66,11 +66,11 @@ class LeNetBasedModel(nn.Module):
 
 
 class VGGInspiredCNN(nn.Module):
-    def __init__(self, input_channels=3, num_classes=10):
+    def __init__(self, in_channels=3, num_classes=10):
         super(VGGInspiredCNN, self).__init__()
         # Convolutional block 1
         self.conv1 = nn.Conv2d(
-            input_channels, 64, kernel_size=3, stride=1, padding=1)
+            in_channels, 64, kernel_size=3, stride=1, padding=1)
         self.bn1 = nn.BatchNorm2d(64)
         # Convolutional block 2
         self.conv2 = nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)

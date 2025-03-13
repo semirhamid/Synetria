@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 from app.training.trainer import Trainer
 from app.models.simple_nn import SimpleNN
-from app.models.cnn import SimpleCNN, LeNetBasedModel
+from app.models.cnn import SimpleCNN, LeNetBasedModel, VGGInspiredCNN
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import datasets, transforms
@@ -11,8 +11,8 @@ from torchvision import datasets, transforms
 async def handle_client(websocket):
     print("Client connected!")
 
-    train_loader, model = load_cnn_example()
-    # train_loader, model = load_mlp_example()
+    # train_loader, model = load_cnn_example()
+    train_loader, model = load_mlp_example()
 
     # criterion = nn.MSELoss()
     criterion = nn.CrossEntropyLoss()
@@ -69,10 +69,10 @@ def load_cnn_example():
 
     # print("inputs: ", len(inputs))
 
-    # model = LeNetBasedModel()
-    model = LeNetBasedModel(in_channels=3, num_classes=len(mnist_dataset.classes))
+    # model = LeNetBasedModel(in_channels=3, num_classes=len(mnist_dataset.classes))
+    model = VGGInspiredCNN(in_channels=3, num_classes=len(mnist_dataset.classes))
 
     # dataset = TensorDataset(inputs, targets)
-    train_loader = DataLoader(mnist_dataset, batch_size=64, shuffle=True)
+    train_loader = DataLoader(mnist_dataset, batch_size=1, shuffle=True)
 
     return train_loader, model

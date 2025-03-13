@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.utils.data import DataLoader
 import json
 import asyncio
 import websockets
@@ -14,10 +15,11 @@ class Trainer:
     async def train(
         self, model, data_loader, criterion, optimizer, websocket, num_epochs=5
     ):
-        """Main training method that coordinates the training process and sends data via WebSocket."""
+        """
+        Main training method that coordinates the training process and sends data via WebSocket.
+        """
 
-        # Get overall model structure before beginning
-        model_structure = self._get_model_structure(model, num_epochs)
+        model_structure = self._get_model_structure(model)
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model = model.to(device)
@@ -28,67 +30,89 @@ class Trainer:
             for batch_idx, (inputs, targets) in enumerate(data_loader):
                 inputs, targets = inputs.to(device), targets.to(device)
 
-                # Regular PyTorch training step
                 optimizer.zero_grad()
 
-                # Capture activations and do forward pass
                 activations, outputs = self._forward_with_activations(model, inputs)
 
-                # Compute loss and do backward pass
                 loss = criterion(outputs, targets)
                 loss.backward()
                 optimizer.step()
-                if batch_idx % 100 == 0:
+
+                # Prepare metadata
+                training_data = {
+                    "epoch": epoch + 1,  # 1-indexed
+                    "batch": batch_idx + 1,  # 1-indexed
+                    "loss": loss.item(),
+                    "total_epochs": num_epochs,
+                    "learning_rate": optimizer.param_groups[0]["lr"],
+                    "batch_size": inputs.size(0),
+                    "model_structure": model_structure,
+                    "layers": [],
+                    "input": {
+                        "type": "something",  # i'm not sure about how to do this yet
+                        "data": (
+                            inputs[0].cpu().numpy().tolist()
+                            if inputs[0].ndim > 1
+                            else None
+                        ),
+                    },
+                }
+
+                self._add_layer_data(model, activations, training_data)
+
+                await self._send_websocket_data(websocket, training_data)
+
+                # logging
+                if batch_idx % 10 == 0:
                     print(
                         f"Train Epoch: {epoch} [{batch_idx * len(inputs)}/{len(data_loader.dataset)} "
                         f"({100. * batch_idx / len(data_loader):.0f}%)]\tLoss: {loss.item():.6f}"
                     )
 
-                # Prepare metadata
-                training_data = {
-                    "epoch": epoch + 1,
-                    "batch": batch_idx + 1,
-                    "loss": loss.item(),
-                    "learning_rate": optimizer.param_groups[0]["lr"],
-                    "batch_size": inputs.size(0),
-                    "model_structure": model_structure,
-                    "layers": [],
-                    "conv_layers": [],
-                    "pooling_layers": [],
-                    "input_image": (
-                        inputs[0].cpu().numpy().tolist() if inputs[0].ndim > 1 else None
-                    ),
-                }
+    def _forward_with_activations(
+        self, model, inputs
+    ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
+        """
+        Perform forward pass while capturing layer activations.
+        """
+        # Should be extended to use more useful techniques than just capturing activations, such as gradcam for cnn, ...
 
-                # Extract and add linear layer data
-                self._add_linear_layer_data(model, training_data)
+        activations = {}
+        hooks = []
 
-                # Extract and add CNN layer data
-                self._add_cnn_layer_data(model, activations, training_data)
+        def get_activation(name):
+            def hook(model, input, output):
+                activations[name] = output.detach()
 
-                # Send data via WebSocket
-                await self._send_websocket_data(websocket, training_data)
+            return hook
 
-    def _get_model_structure(self, model, num_epochs) -> Dict[str, Any]:
-        """Extract and return the model structure metadata."""
+        # Register hooks for CNN layers
+        for name, module in model.named_modules():
+            if isinstance(module, (nn.Conv2d, nn.MaxPool2d, nn.AvgPool2d, nn.Linear)):
+                hooks.append(module.register_forward_hook(get_activation(name)))
+
+        # Perform the forward pass
+        outputs = model(inputs)
+
+        # Remove hooks
+        for hook in hooks:
+            hook.remove()
+
+        return activations, outputs
+
+    def _get_model_structure(self, model) -> Dict[str, Any]:
+        """
+        Extract and return the model structure metadata.
+        """
+
         model_structure = {
             "total_layers": len(list(model.modules())),
             "total_params": sum(p.numel() for p in model.parameters()),
-            "total_epochs": num_epochs,
             "layer_details": [],
         }
 
         for name, layer in model.named_modules():
-            if isinstance(layer, nn.Linear):
-                model_structure["layer_details"].append(
-                    {
-                        "layer_name": name,
-                        "layer_type": "linear",
-                        "input_size": list(layer.weight.shape)[1],
-                        "output_size": list(layer.weight.shape)[0],
-                    }
-                )
-            elif isinstance(layer, nn.Conv2d):
+            if isinstance(layer, nn.Conv2d):
                 model_structure["layer_details"].append(
                     {
                         "layer_name": name,
@@ -121,67 +145,55 @@ class Trainer:
                         "output_size": [0, kernel_size],
                     }
                 )
+            elif isinstance(layer, nn.Linear):
+                model_structure["layer_details"].append(
+                    {
+                        "layer_name": name,
+                        "layer_type": "linear",
+                        "input_size": list(layer.weight.shape)[1],
+                        "output_size": list(layer.weight.shape)[0],
+                    }
+                )
 
         return model_structure
 
-    def _forward_with_activations(
-        self, model, inputs
-    ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
-        """Perform forward pass while capturing layer activations."""
-        # Should be extended to use more advanced techniques than just capturing activations, such as gradcam, ...
-
-        activations = {}
-        hooks = []
-
-        # Define hook function to capture activations
-        def get_activation(name):
-            def hook(model, input, output):
-                activations[name] = output.detach()
-
-            return hook
-
-        # Register hooks for CNN layers
+    def _add_layer_data(
+        self, model: nn.Module, activations, training_data: Dict[str, any]
+    ) -> None:
         for name, module in model.named_modules():
-            if isinstance(module, (nn.Conv2d, nn.MaxPool2d, nn.AvgPool2d)):
-                hooks.append(module.register_forward_hook(get_activation(name)))
-
-        # Perform the forward pass
-        outputs = model(inputs)
-
-        # Remove hooks
-        for hook in hooks:
-            hook.remove()
-
-        return activations, outputs
-
-    def _add_linear_layer_data(self, model, training_data) -> None:
-        """Extract and add data for linear layers."""
-        for name, param in model.named_parameters():
-            if "weight" in name or "bias" in name:
-                if "conv" not in name and "pool" not in name:
-                    layer_data = {
-                        "layer": name,
-                        "weights": param.data.tolist(),
-                        "gradients": (
-                            param.grad.tolist() if param.grad is not None else None
-                        ),
-                    }
-                    if "bias" in name:
-                        # Find the last added layer and add biases to it
-                        if training_data["layers"]:
-                            training_data["layers"][-1]["biases"] = param.data.tolist()
-                    else:
-                        training_data["layers"].append(layer_data)
-
-    def _add_cnn_layer_data(self, model, activations, training_data) -> None:
-        """Extract and add data for CNN layers (convolutional and pooling)."""
-        for name, module in model.named_modules():
-            # Process convolutional layers
             if isinstance(module, nn.Conv2d):
                 self._add_conv_layer_data(name, module, activations, training_data)
-            # Process pooling layers
             elif isinstance(module, (nn.MaxPool2d, nn.AvgPool2d)):
                 self._add_pooling_layer_data(name, module, activations, training_data)
+            elif isinstance(module, nn.Linear):
+                self._add_linear_layer_data(name, module, activations, training_data)
+            else:
+                # print("Unknown layer type found: ", name, module)
+                pass
+
+    def _add_linear_layer_data(
+        self, name, module: nn.Linear, activations, training_data
+    ) -> None:
+        """Extract and add data for linear layers."""
+        activation = activations[name]
+        
+        # Average over the batch dimension (dim=0) to get a single value per node
+        averaged_activation = activation.mean(dim=0).detach().cpu().numpy().tolist() if activation is not None else None
+
+        layer_data = {
+            "layer_name": name,
+            "type": "linear",
+            "weights": module.weight.data.tolist(),
+            "gradients": (
+                module.weight.grad.tolist() if module.weight.grad is not None else None
+            ),
+            "activations": averaged_activation  # updated to send averaged activation per node
+        }
+
+        if module.bias is not None:
+            layer_data["biases"] = module.bias.data.tolist()
+
+        training_data["layers"].append(layer_data)
 
     def _add_conv_layer_data(self, name, module, activations, training_data) -> None:
         """Extract and add data for a convolutional layer."""
@@ -206,6 +218,7 @@ class Trainer:
         # Create conv layer data structure
         conv_layer_data = {
             "layer_name": name,
+            "type": "conv",
             "filters": filters,
             "feature_maps": feature_maps,
             "kernel_size": list(module.kernel_size),
@@ -224,7 +237,7 @@ class Trainer:
                 act.shape[3],
             ]
 
-        training_data["conv_layers"].append(conv_layer_data)
+        training_data["layers"].append(conv_layer_data)
 
     def _add_pooling_layer_data(self, name, module, activations, training_data) -> None:
         """Extract and add data for a pooling layer."""
@@ -246,6 +259,7 @@ class Trainer:
         # Create pooling layer data structure
         pooling_layer_data = {
             "layer_name": name,
+            "type": "pool",
             "pool_type": pool_type,
             "kernel_size": (
                 [kernel_size, kernel_size]
@@ -267,7 +281,7 @@ class Trainer:
                 act.shape[3],
             ]
 
-        training_data["pooling_layers"].append(pooling_layer_data)
+        training_data["layers"].append(pooling_layer_data)
 
     def _get_feature_maps(self, name, activations) -> List[Dict[str, Any]]:
         """Extract feature maps from activations for a given layer."""
