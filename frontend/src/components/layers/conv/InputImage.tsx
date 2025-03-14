@@ -16,7 +16,7 @@ export const InputImageVisualizer: React.FC<InputImageVisualizerProps> = ({
   const channels = inputImage[0]?.[0]?.length || 1;
 
 
-  console.table({ channels, width, height });
+  // console.table({ channels, width, height });
 
   const aspectRatio = width / height;
   const maxDimension = 4;

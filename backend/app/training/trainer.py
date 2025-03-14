@@ -49,7 +49,7 @@ class Trainer:
                     "model_structure": model_structure,
                     "layers": [],
                     "network_input": {
-                        "type": "something",  # i'm not sure about how to do this yet
+                        "type": "image",  # i'm not sure about how to do this yet
                         "data": (
                             inputs[0].cpu().numpy().transpose(1,2,0).tolist()
                             if inputs[0].ndim > 1

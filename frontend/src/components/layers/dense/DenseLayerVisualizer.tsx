@@ -3,6 +3,7 @@ import { LayerData } from '../../types';
 import { Html, Instance, Instances } from '@react-three/drei';
 import * as THREE from 'three';
 import Edge from './Edge';
+import BatchedEdges from './BatchedEdges';
 
 interface DenseLayerVisualizerProps {
   layer: LayerData;
@@ -14,9 +15,6 @@ interface DenseLayerVisualizerProps {
   colors: string[];
 }
 
-/**
- * Calculates positions for neurons in a layer - memoized for performance
- */
 const DenseLayerVisualizer: React.FC<DenseLayerVisualizerProps> = ({
   layer,
   layerIndex,
@@ -41,11 +39,11 @@ const DenseLayerVisualizer: React.FC<DenseLayerVisualizerProps> = ({
 
     return Array.from({ length: numNeurons }, (_, neuronIndex) => {
       const activation = layer.activations ? layer.activations[neuronIndex] : 0;
-      
+
       // Determine color based on activation
       const absActivation = Math.abs(activation);
       let color;
-      
+
       if (absActivation < 0.1) {
         // Very low activation - use black with transparency
         color = new THREE.Color(0x000000);
@@ -58,10 +56,10 @@ const DenseLayerVisualizer: React.FC<DenseLayerVisualizerProps> = ({
         const intensity = Math.max(0.2, Math.min(1.0, absActivation));
         color = new THREE.Color(0, 0, intensity); // Blue with varying intensity
       }
-      
+
       // Add slight transparency for better visualization
       const opacity = Math.max(0.6, Math.min(1.0, absActivation));
-      
+
       return {
         position: [
           layerIndex * layerSpacing, // X position (layer depth)
@@ -85,12 +83,14 @@ const DenseLayerVisualizer: React.FC<DenseLayerVisualizerProps> = ({
     const totalHeight = (numNeurons - 1) * neuronSpacing;
     const startY = -totalHeight / 2;
 
-    return Array.from({ length: numNeurons }, (_, neuronIndex) => (
+    return Array.from(
+      { length: numNeurons },
+      (_, neuronIndex) =>
         [
           (layerIndex + 1) * layerSpacing,
           startY + neuronIndex * neuronSpacing,
           0,
-        ] as [number, number, number])
+        ] as [number, number, number]
     );
   }, [nextLayer, layerIndex, layerSpacing, neuronSpacing]);
 
@@ -130,16 +130,58 @@ const DenseLayerVisualizer: React.FC<DenseLayerVisualizerProps> = ({
 
   // for optimization: only render edges when needed
   // (e.g., when hovering over a node or after training is complete)
-  const shouldRenderEdges =
-    hoveredNode !== null ||
-    neuronPositions.length * nextLayerPositions.length < 800;
+  const positiveEdges = useMemo(() => {
+    if (!nextLayer || !nextLayer.weights) {
+      return;
+    }
+    const positions: number[] = [];
+    nextLayer.weights.map((neuronWeights, targetIndex) => {
+      neuronWeights.map((weight, sourceIndex) => {
+        if (weight > 0) {
+          const sourcePosition = neuronPositions[sourceIndex]?.position;
+          const targetPosition = nextLayerPositions[targetIndex];
+
+          if (sourcePosition && targetPosition) {
+            positions.push(...sourcePosition, ...targetPosition);
+          }
+        }
+      });
+    });
+
+    return positions;
+  }, [nextLayer, neuronPositions, nextLayerPositions]);
+
+  const negativeEdges = useMemo(() => {
+    if (!nextLayer || !nextLayer.weights) {
+      return;
+    }
+    const positions: number[] = [];
+    nextLayer.weights.map((neuronWeights, targetIndex) => {
+      neuronWeights.map((weight, sourceIndex) => {
+        if (weight < 0) {
+          const sourcePosition = neuronPositions[sourceIndex]?.position;
+          const targetPosition = nextLayerPositions[targetIndex];
+
+          if (sourcePosition && targetPosition) {
+            positions.push(...sourcePosition, ...targetPosition);
+          }
+        }
+      });
+    });
+
+    return positions;
+  }, [nextLayer, neuronPositions, nextLayerPositions]);
+
+  // const shouldRenderEdges =
+  //   hoveredNode !== null ||
+  //   neuronPositions.length * nextLayerPositions.length < 800;
 
   return (
     <group>
       {/* Render neurons using instanced mesh for performance */}
       <Instances limit={neuronPositions.length} ref={nodesRef}>
-        {/* <sphereGeometry args={[0.3, 8, 8]} /> */}
-        <boxGeometry args={[0.5, 0.5, 0.5, 2, 2]} />
+        <sphereGeometry args={[0.3, 8, 8]} />
+        {/* <boxGeometry args={[0.5, 0.5, 0.5, 2, 2]} /> */}
         <meshBasicMaterial transparent={true} />
 
         {neuronPositions.map((neuron, idx) => (
@@ -162,8 +204,9 @@ const DenseLayerVisualizer: React.FC<DenseLayerVisualizerProps> = ({
           position={[
             neuronPositions[hoveredNode].position[0],
             neuronPositions[hoveredNode].position[1],
-            neuronPositions[hoveredNode].position[2], 
+            neuronPositions[hoveredNode].position[2],
           ]}
+          pointerEvents='none'
         >
           <div
             style={{
@@ -176,17 +219,25 @@ const DenseLayerVisualizer: React.FC<DenseLayerVisualizerProps> = ({
             }}
           >
             <div>
-              Activation: {neuronPositions[hoveredNode].activation?.toFixed(4) || 'N/A'} 
+              Activation:{' '}
+              {neuronPositions[hoveredNode].activation?.toFixed(4) || 'N/A'}
             </div>
-            <div>Bias: {neuronPositions[hoveredNode].bias?.toFixed(4) || 'N/A'}</div>
+            <div>
+              Bias: {neuronPositions[hoveredNode].bias?.toFixed(4) || 'N/A'}
+            </div>
           </div>
         </Html>
       )}
 
-      {/* Render connections on demand for better performance */}
-      {shouldRenderEdges && nextLayer && nextLayer.weights && (
+      {/* Render connections in batches, with positive and negative edges. And render the true edges on hover */}
+      {hoveredNode === null && positiveEdges && negativeEdges ? (
         <>
-          {nextLayer.weights.map((neuronWeights, targetIndex) =>
+          <BatchedEdges positions={positiveEdges} color="blue" />
+          <BatchedEdges positions={negativeEdges} color="red" />
+        </>
+      ) : (
+        <>
+          {nextLayer?.weights.map((neuronWeights, targetIndex) =>
             neuronWeights.map((weight, sourceIndex) => {
               if (hoveredNode !== null && sourceIndex !== hoveredNode)
                 return null;

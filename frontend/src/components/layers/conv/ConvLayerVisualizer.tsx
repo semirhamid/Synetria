@@ -3,7 +3,7 @@ import { Html, Text } from '@react-three/drei';
 
 import { LayerData, FeatureMap } from '../../types';
 import { FeatureMapMesh } from './FeatureMapVisualizer';
-import { heatmapColormap } from '../../../utils/visualization3d';
+import { viridisColormap } from '../../../utils/visualization3d';
 
 interface ConvLayerVisualizerProps {
   layer: LayerData;
@@ -109,7 +109,7 @@ const ConvLayerVisualizer: React.FC<ConvLayerVisualizerProps> = ({
                   onHover={handleFeatureMapHover}
                   index={mapIndex}
                   isHovered={hoveredMap === mapIndex}
-                  colormap={heatmapColormap}
+                  colormap={viridisColormap}
                 />
 
                 {/* Hover information tooltip */}

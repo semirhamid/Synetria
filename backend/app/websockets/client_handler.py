@@ -73,6 +73,6 @@ def load_cnn_example():
     # model = VGGInspiredCNN(in_channels=3, num_classes=len(mnist_dataset.classes))
 
     # dataset = TensorDataset(inputs, targets)
-    train_loader = DataLoader(mnist_dataset, batch_size=1, shuffle=True)
+    train_loader = DataLoader(mnist_dataset, batch_size=16, shuffle=True)
 
     return train_loader, model

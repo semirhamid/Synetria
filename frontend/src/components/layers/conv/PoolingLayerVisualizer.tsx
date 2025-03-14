@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 
 import { LayerData, FeatureMap } from '../../types';
 import { FeatureMapMesh } from './FeatureMapVisualizer';
-import { viridisColormap } from '../../../utils/visualization3d';
+import { heatmapColormap } from '../../../utils/visualization3d';
 
 interface PoolingLayerVisualizerProps {
   layer: LayerData;
@@ -121,7 +121,7 @@ const PoolingLayerVisualizer: React.FC<PoolingLayerVisualizerProps> = ({
                   onHover={handleFeatureMapHover}
                   index={mapIndex}
                   isHovered={hoveredMap === mapIndex}
-                  colormap={viridisColormap}
+                  colormap={heatmapColormap}
                 />
 
                 {/* Hover information tooltip */}

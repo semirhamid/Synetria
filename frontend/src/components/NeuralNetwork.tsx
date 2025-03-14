@@ -43,7 +43,7 @@ const NeuralNetwork: React.FC = () => {
 
       if (
         receivedData.network_input !== null &&
-        receivedData.network_input.type == 'something'
+        receivedData.network_input.type == 'image'
       ) {
         setNetworkInputData(receivedData.network_input.data);
       }
@@ -116,7 +116,7 @@ const NeuralNetwork: React.FC = () => {
 
           {/* Render the input image as the first layer */}
           {networkInputData && (
-            <InputImageVisualizer 
+            <InputImageVisualizer
               position={[0, 0, 0]}
               inputImage={networkInputData}
             />
