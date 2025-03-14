@@ -36,7 +36,7 @@ const FeatureMapMesh = React.memo(({
   position, 
   size, 
   color, 
-  poolType,
+  // poolType,
   onHover, 
   index,
   // isHovered 
@@ -84,11 +84,11 @@ const FeatureMapMesh = React.memo(({
         {`Channel ${featureMap.channel_id}`}
       </Text>
       
-      {/* Pooling operation indicator */}
+      {/* Pooling operation indicator
       <mesh position={[size/2 - 0.5, size/2 - 0.5, 0.1]} scale={0.3}>
         <sphereGeometry args={[0.5, 16, 16]} />
         <meshBasicMaterial color={poolType === 'max' ? 'red' : 'blue'} />
-      </mesh>
+      </mesh> */}
     </group>
   );
 });
@@ -120,9 +120,10 @@ const PoolingLayerVisualizer: React.FC<PoolingLayerVisualizerProps> = ({
   
   // Memoize constants for feature map layout
   const layoutConfig = useMemo(() => ({
-    mapSize: 2.5, // Size of each feature map
-    mapSpacing: 0.5, // Spacing between maps
-    mapsPerColumn: feature_maps ? feature_maps.length : 0, // Number of maps to display per column
+    mapSize: 5, // Size of each feature map
+    mapSpacing: 0.8, // Spacing between maps
+    // mapsPerColumn: feature_maps ? feature_maps.length : 0, // Number of maps to display per column
+    mapsPerColumn: feature_maps ? feature_maps.length / 2 : 0,
   }), [feature_maps]);
   
   // Get the pooling layer color based on type
@@ -148,9 +149,9 @@ const PoolingLayerVisualizer: React.FC<PoolingLayerVisualizerProps> = ({
       const column = Math.floor(mapIndex / mapsPerColumn);
       const row = mapIndex % mapsPerColumn;
       
-      const xPos = 0;
+      const zPos = -column * 2;
       const yPos = -row * (mapSize + mapSpacing) + (mapsPerColumn * (mapSize + mapSpacing)) / 2 - mapSize;
-      const zPos = column * (mapSize + mapSpacing) - 2;
+      const xPos = column * (mapSize + mapSpacing) - 2;
       
       return [xPos, yPos, zPos] as [number, number, number];
     });
@@ -160,6 +161,7 @@ const PoolingLayerVisualizer: React.FC<PoolingLayerVisualizerProps> = ({
   const handleFeatureMapHover = (isHovered: boolean, index: number) => {
     setHoveredMap(isHovered ? index : null);
   };
+  // console.log("pool layer", layer)
   
   return (
     <group position={layerPosition}>
@@ -173,9 +175,12 @@ const PoolingLayerVisualizer: React.FC<PoolingLayerVisualizerProps> = ({
           fontSize: '14px',
           fontWeight: 'bold',
           textAlign: 'center',
-          width: '150px'
+          minWidth: '100px',
+          width: '100%',
         }}>
-          <div>{layer.layer_name}</div>
+          <div style={{fontSize: '12px'}}>{`layer : ${layer.layer_name}`}</div>
+          <div style={{fontSize: '12px'}}>{`type: ${layer.type}`}</div>
+          <div style={{fontSize: '12px'}}>{`pool type: ${pool_type}`}</div>
           <div style={{ fontSize: '12px' }}>
             {pool_type && pool_size ? `${pool_type} ${pool_size[0]}x${pool_size[1]}` : ''}
             {pool_stride ? `, stride ${pool_stride[0]}x${pool_stride[1]}` : ''}

@@ -34,7 +34,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   render(): ReactNode {
     if (this.state.hasError) {
       return (
-        <div className="flex flex-col items-center justify-center h-screen bg-white">
+        <div className="flex flex-col items-center justify-center h-screen bg-black">
           <div className="text-center">
             <h1 className="text-4xl font-bold text-red-600">
               Something went wrong! 💔

@@ -14,7 +14,7 @@ class Trainer:
 
     async def train(
         self, model, data_loader, criterion, optimizer, websocket, num_epochs=5
-    ):
+    ): 
         """
         Main training method that coordinates the training process and sends data via WebSocket.
         """
@@ -48,10 +48,10 @@ class Trainer:
                     "batch_size": inputs.size(0),
                     "model_structure": model_structure,
                     "layers": [],
-                    "input": {
+                    "network_input": {
                         "type": "something",  # i'm not sure about how to do this yet
                         "data": (
-                            inputs[0].cpu().numpy().tolist()
+                            inputs[0].cpu().numpy().transpose(1,2,0).tolist()
                             if inputs[0].ndim > 1
                             else None
                         ),
@@ -63,7 +63,7 @@ class Trainer:
                 await self._send_websocket_data(websocket, training_data)
 
                 # logging
-                if batch_idx % 10 == 0:
+                if batch_idx % 100 == 0:
                     print(
                         f"Train Epoch: {epoch} [{batch_idx * len(inputs)}/{len(data_loader.dataset)} "
                         f"({100. * batch_idx / len(data_loader):.0f}%)]\tLoss: {loss.item():.6f}"
@@ -302,7 +302,8 @@ class Trainer:
         """Send data to the client via WebSocket with error handling."""
         try:
             await websocket.send(json.dumps(data))
-            await asyncio.sleep(0.1)  # Reduced from 5 seconds to be more responsive
+            # await asyncio.sleep(0.1) 
+            # pass
         except websockets.exceptions.ConnectionClosed as e:
             print(f"WebSocket connection closed: {e}")
             raise  # Re-raise to let caller handle the disconnect

@@ -11,8 +11,8 @@ from torchvision import datasets, transforms
 async def handle_client(websocket):
     print("Client connected!")
 
-    # train_loader, model = load_cnn_example()
-    train_loader, model = load_mlp_example()
+    train_loader, model = load_cnn_example()
+    # train_loader, model = load_mlp_example()
 
     # criterion = nn.MSELoss()
     criterion = nn.CrossEntropyLoss()
@@ -69,8 +69,8 @@ def load_cnn_example():
 
     # print("inputs: ", len(inputs))
 
-    # model = LeNetBasedModel(in_channels=3, num_classes=len(mnist_dataset.classes))
-    model = VGGInspiredCNN(in_channels=3, num_classes=len(mnist_dataset.classes))
+    model = LeNetBasedModel(in_channels=3, num_classes=len(mnist_dataset.classes))
+    # model = VGGInspiredCNN(in_channels=3, num_classes=len(mnist_dataset.classes))
 
     # dataset = TensorDataset(inputs, targets)
     train_loader = DataLoader(mnist_dataset, batch_size=1, shuffle=True)

@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Stats } from '@react-three/drei';
+
+import LoadingComponent from './LoadingComponent';
+import LayerVisualizer from './layers/LayerVisualizer';
 import { Sidebar, SliderControls } from './SideBar';
 import {
   LayerData,
@@ -14,101 +17,37 @@ import {
   DEFAULT_NODE_SIZE,
   LAYER_COLORS,
 } from '../constants';
-import LoadingComponent from './LoadingComponent';
-
-import DenseLayerVisualizer from './layers/dense/DenseLayerVisualizer';
-import ConvLayerVisualizer from './layers/conv/ConvLayerVisualizer';
-import PoolingLayerVisualizer from './layers/pooling/PoolingLayerVisualizer';
-
-// Memoized layer visualizer component to prevent unnecessary re-renders
-const LayerVisualizer = React.memo(({ 
-  layer, 
-  layerIndex, 
-  nextLayer, 
-  layerSpacing, 
-  neuronSpacing, 
-  nodeSize, 
-  colors 
-}: {
-  layer: LayerData;
-  layerIndex: number;
-  nextLayer: LayerData | null;
-  layerSpacing: number;
-  neuronSpacing: number;
-  nodeSize: number;
-  colors: string[];
-}) => {
-  // Determine which visualizer to use based on layer type
-  const layerType = layer.type.toLowerCase();
-  
-  switch (layerType) {
-    case 'linear':
-    case 'dense':
-      return (
-        <DenseLayerVisualizer
-          key={`layer-${layerIndex}`}
-          layer={layer}
-          layerIndex={layerIndex}
-          nextLayer={nextLayer}
-          layerSpacing={layerSpacing}
-          neuronSpacing={neuronSpacing}
-          nodeSize={nodeSize}
-          colors={colors}
-        />
-      );
-    case 'conv2d':
-    case 'conv':
-    case 'convolution':
-      return (
-        <ConvLayerVisualizer
-          key={`layer-${layerIndex}`}
-          layer={layer}
-          layerIndex={layerIndex}
-          nextLayer={nextLayer}
-          layerSpacing={layerSpacing}
-          nodeSize={nodeSize}
-          colors={colors}
-        />
-      );
-    case 'maxpool2d':
-    case 'avgpool2d':
-    case 'maxpool':
-    case 'avgpool':
-    case 'pool':
-      return (
-        <PoolingLayerVisualizer
-          key={`layer-${layerIndex}`}
-          layer={layer}
-          layerIndex={layerIndex}
-          nextLayer={nextLayer}
-          layerSpacing={layerSpacing}
-          nodeSize={nodeSize}
-          colors={colors}
-        />
-      );
-    default:
-      console.warn(`Unsupported layer type: ${layer.type}`);
-      return null;
-  }
-});
+import { InputImageVisualizer } from './layers/conv/InputImage';
 
 const NeuralNetwork: React.FC = () => {
+  const [networkInputData, setNetworkInputData] = useState<number[][][] | null>(
+    null
+  );
   const [networkData, setNetworkData] = useState<LayerData[] | null>(null);
-  const [modelMetadata, setModelMetadata] = useState<ModelStructure | null>(null);
+  const [modelMetadata, setModelMetadata] = useState<ModelStructure | null>(
+    null
+  );
   const [metaData, setMetaData] = useState<ModelMetaData | null>(null);
   const [currentEpoch, setCurrentEpoch] = useState<number>(0);
-  
+
   const [layerSpacing, setLayerSpacing] = useState(DEFAULT_LAYER_SPACING);
   const [neuronSpacing, setNeuronSpacing] = useState(DEFAULT_NEURON_SPACING);
   const [nodeSize, setNodeSize] = useState(DEFAULT_NODE_SIZE);
-  
+
   // Process WebSocket data only once for each received data
   const processWebSocketData = useCallback((receivedData: TrainingData) => {
     if (receivedData.epoch && receivedData.layers) {
       setNetworkData(receivedData.layers);
       setModelMetadata(receivedData.model_structure);
       setCurrentEpoch(receivedData.epoch);
-      
+
+      if (
+        receivedData.network_input !== null &&
+        receivedData.network_input.type == 'something'
+      ) {
+        setNetworkInputData(receivedData.network_input.data);
+      }
+
       const metaData: ModelMetaData = {
         epoch: receivedData.epoch,
         batch: receivedData.batch,
@@ -123,7 +62,7 @@ const NeuralNetwork: React.FC = () => {
   // WebSocket connection
   useEffect(() => {
     const socket = new WebSocket('ws://localhost:8000');
-    
+
     socket.onopen = () => console.log('WebSocket connection established');
     socket.onmessage = (event) => {
       try {
@@ -133,17 +72,17 @@ const NeuralNetwork: React.FC = () => {
         console.error('Error processing WebSocket data:', error);
       }
     };
-    
+
     socket.onclose = () => console.log('WebSocket connection closed');
     socket.onerror = (error) => console.error('WebSocket error:', error);
-    
+
     return () => {
       socket.close();
     };
   }, [processWebSocketData]);
 
   if (!networkData || !modelMetadata) return <LoadingComponent />;
-  
+
   return (
     <div className="flex overflow-y-hidden max-h-screen">
       {/* Sidebar */}
@@ -165,23 +104,35 @@ const NeuralNetwork: React.FC = () => {
 
       {/* Neural Network Visualization */}
       <div className="flex-1 max-h-screen max-w-full w-full">
-        <Canvas 
-          // gl={{ clearColor: "black" }} 
-          camera={{ fov: 50, position: [0, 0, 50] }} 
+        <Canvas
+          // gl={{ clearColor: "black" }}
+          camera={{ fov: 50, position: [0, 0, 50] }}
           // style={{ background: 'black' }}
         >
           <Stats />
-          <OrbitControls enableDamping dampingFactor={0.1}/>
+          <OrbitControls enableDamping dampingFactor={0.1} />
           <ambientLight intensity={0.5} />
           <pointLight position={[10, 10, 10]} />
+
+          {/* Render the input image as the first layer */}
+          {networkInputData && (
+            <InputImageVisualizer 
+              position={[0, 0, 0]}
+              inputImage={networkInputData}
+            />
+          )}
 
           {/* Render network layers using memoized components */}
           {networkData.map((layer, layerIndex) => (
             <LayerVisualizer
               key={`layer-${layerIndex}`}
               layer={layer}
-              layerIndex={layerIndex}
-              nextLayer={layerIndex < networkData.length - 1 ? networkData[layerIndex + 1] : null}
+              layerIndex={layerIndex + 1}
+              nextLayer={
+                layerIndex < networkData.length - 1
+                  ? networkData[layerIndex + 1]
+                  : null
+              }
               layerSpacing={layerSpacing}
               neuronSpacing={neuronSpacing}
               nodeSize={nodeSize}

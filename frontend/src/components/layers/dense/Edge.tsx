@@ -20,6 +20,14 @@ const Edge: React.FC<EdgeProps> = ({
     return null;
   }
 
+  // Determine opacity based on weight magnitude
+  // Use a minimum opacity so very weak weights are still visible but faint
+  const absWeight = Math.abs(weight);
+  const opacity = Math.max(0.5, Math.min(1.0, absWeight));
+  
+  // Determine line width based on weight (but keepin it reasonable)
+  const lineWidth = Math.max(0.3, Math.min(3.0, absWeight * 3));
+
   // Midpoint calculation for placing the tooltip
   const midPoint = [
     (sourcePosition[0] + targetPosition[0]) / 2,
@@ -31,8 +39,10 @@ const Edge: React.FC<EdgeProps> = ({
     <>
       <Line
         points={[sourcePosition, targetPosition]}
-        color={weight > 0 ? 'blue' : 'red'}
-        lineWidth={Math.max(0.4, Math.abs(weight)) * 2}
+        color={weight > 0 ? 'blue' : 'red'} // Keep red for negative, blue for positive
+        lineWidth={lineWidth}
+        transparent={true}
+        opacity={opacity}
         onPointerOver={() => setHovered(true)} // Show tooltip on hover
         onPointerOut={() => setHovered(false)} // Hide tooltip on hover end
       />

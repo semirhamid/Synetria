@@ -50,6 +50,7 @@ export interface TrainingData {
   loss: number;
   layers: LayerData[];
   model_structure: ModelStructure;
+  network_input: NetworkInput
 }
 
 export interface ModelMetaData {
@@ -58,4 +59,14 @@ export interface ModelMetaData {
   batch_size: number;
   learning_rate: number;
   loss: number;
+}
+
+export interface FeatureMap {
+  channel_id: number;
+  activation_map: number[][];
+}
+
+export interface NetworkInput {
+  type: string;
+  data: number[][][];
 }

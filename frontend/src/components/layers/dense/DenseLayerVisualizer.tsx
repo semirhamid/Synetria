@@ -27,9 +27,6 @@ const DenseLayerVisualizer: React.FC<DenseLayerVisualizerProps> = ({
   colors,
 }) => {
   const nodesRef = useRef<THREE.InstancedMesh>(null);
-  const nodeColorRef = useRef<THREE.Color>(
-    new THREE.Color(colors[layerIndex % colors.length])
-  );
   const [hoveredNode, setHoveredNode] = useState<number | null>(null);
 
   // console.log(layer)
@@ -42,15 +39,42 @@ const DenseLayerVisualizer: React.FC<DenseLayerVisualizerProps> = ({
     const totalHeight = (numNeurons - 1) * neuronSpacing;
     const startY = -totalHeight / 2;
 
-    return Array.from({ length: numNeurons }, (_, neuronIndex) => ({
-      position: [
-        layerIndex * layerSpacing, // X position (layer depth)
-        startY + neuronIndex * neuronSpacing, // Y position (vertical position)
-        0, // Z position
-      ] as [number, number, number],
-      bias: layer.biases ? layer.biases[neuronIndex] : 0,
-      index: neuronIndex,
-    }));
+    return Array.from({ length: numNeurons }, (_, neuronIndex) => {
+      const activation = layer.activations ? layer.activations[neuronIndex] : 0;
+      
+      // Determine color based on activation
+      const absActivation = Math.abs(activation);
+      let color;
+      
+      if (absActivation < 0.1) {
+        // Very low activation - use black with transparency
+        color = new THREE.Color(0x000000);
+      } else if (activation < 0) {
+        // Negative activation - use red with intensity based on magnitude
+        const intensity = Math.max(0.2, Math.min(1.0, absActivation));
+        color = new THREE.Color(intensity, 0, 0); // Red with varying intensity
+      } else {
+        // Positive activation - use blue with intensity based on magnitude
+        const intensity = Math.max(0.2, Math.min(1.0, absActivation));
+        color = new THREE.Color(0, 0, intensity); // Blue with varying intensity
+      }
+      
+      // Add slight transparency for better visualization
+      const opacity = Math.max(0.6, Math.min(1.0, absActivation));
+      
+      return {
+        position: [
+          layerIndex * layerSpacing, // X position (layer depth)
+          startY + neuronIndex * neuronSpacing, // Y position (vertical position)
+          0, // Z position
+        ] as [number, number, number],
+        color: color,
+        opacity: opacity,
+        activation: activation,
+        bias: layer.biases ? layer.biases[neuronIndex] : 0,
+        index: neuronIndex,
+      };
+    });
   }, [layer, layerIndex, layerSpacing, neuronSpacing]);
 
   // Memoize the next layer positions for connections (if needed)
@@ -82,10 +106,11 @@ const DenseLayerVisualizer: React.FC<DenseLayerVisualizerProps> = ({
       const matrix = new THREE.Matrix4();
       const position = new THREE.Vector3(...neuron.position);
 
-      // Scale the node based on bias (normalized) or use default node size
-      const biasValue = neuron.bias;
-      const scaleFactor = biasValue
-        ? Math.max(0.5, Math.min(2.0, Math.abs(biasValue)))
+      // Scale the node based on activation value (normalized) or use default node size
+      const activation = neuron.activation || 0;
+      const absActivation = Math.abs(activation);
+      const scaleFactor = absActivation
+        ? Math.max(0.1, Math.min(2.0, absActivation))
         : 1.0;
       const scale = new THREE.Vector3(
         nodeSize * scaleFactor,
@@ -101,13 +126,13 @@ const DenseLayerVisualizer: React.FC<DenseLayerVisualizerProps> = ({
     if (nodesRef.current) {
       nodesRef.current.instanceMatrix.needsUpdate = true;
     }
-  }, [layer.biases, neuronPositions, nodeSize, colors, layerIndex]);
+  }, [layer.activations, neuronPositions, nodeSize, colors, layerIndex]);
 
   // for optimization: only render edges when needed
   // (e.g., when hovering over a node or after training is complete)
   const shouldRenderEdges =
     hoveredNode !== null ||
-    neuronPositions.length * nextLayerPositions.length < 4000; // Add conditions here
+    neuronPositions.length * nextLayerPositions.length < 800;
 
   return (
     <group>
@@ -115,7 +140,7 @@ const DenseLayerVisualizer: React.FC<DenseLayerVisualizerProps> = ({
       <Instances limit={neuronPositions.length} ref={nodesRef}>
         {/* <sphereGeometry args={[0.3, 8, 8]} /> */}
         <boxGeometry args={[0.5, 0.5, 0.5, 2, 2]} />
-        <meshBasicMaterial color={colors[layerIndex % colors.length]} />
+        <meshBasicMaterial transparent={true} />
 
         {neuronPositions.map((neuron, idx) => (
           <Instance
@@ -124,17 +149,20 @@ const DenseLayerVisualizer: React.FC<DenseLayerVisualizerProps> = ({
             scale={nodeSize}
             onPointerOver={() => setHoveredNode(idx)}
             onPointerOut={() => setHoveredNode(null)}
-          />
+            color={neuron.color}
+          >
+            {/* <meshBasicMaterial color={neuron.color} transparent={true} opacity={neuron.opacity} /> */}
+          </Instance>
         ))}
       </Instances>
 
-      {/* Display bias value for hovered neuron */}
+      {/* Display activation and bias value for hovered neuron */}
       {hoveredNode !== null && (
         <Html
           position={[
             neuronPositions[hoveredNode].position[0],
             neuronPositions[hoveredNode].position[1],
-            neuronPositions[hoveredNode].position[2] + 2,
+            neuronPositions[hoveredNode].position[2], 
           ]}
         >
           <div
@@ -147,7 +175,10 @@ const DenseLayerVisualizer: React.FC<DenseLayerVisualizerProps> = ({
               whiteSpace: 'nowrap',
             }}
           >
-            Bias: {neuronPositions[hoveredNode].bias?.toFixed(4) || 'N/A'}
+            <div>
+              Activation: {neuronPositions[hoveredNode].activation?.toFixed(4) || 'N/A'} 
+            </div>
+            <div>Bias: {neuronPositions[hoveredNode].bias?.toFixed(4) || 'N/A'}</div>
           </div>
         </Html>
       )}
@@ -157,7 +188,7 @@ const DenseLayerVisualizer: React.FC<DenseLayerVisualizerProps> = ({
         <>
           {nextLayer.weights.map((neuronWeights, targetIndex) =>
             neuronWeights.map((weight, sourceIndex) => {
-              if (hoveredNode !== null && sourceIndex !== hoveredNode && weight > 0.5)
+              if (hoveredNode !== null && sourceIndex !== hoveredNode)
                 return null;
 
               const sourcePosition = neuronPositions[sourceIndex]?.position;
