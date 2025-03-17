@@ -6,7 +6,7 @@ import * as THREE from 'three';
  * @param colorMap Function to map normalized values to RGB colors
  * @returns THREE.Texture
  */
-export const createTextureFromData = (
+export const createTextureFromGrayscaleImg = (
   data: number[][],
   colorMap: (value: number) => [number, number, number] = heatmapColormap
 ): THREE.Texture => {
@@ -62,8 +62,55 @@ export const createTextureFromData = (
 
   const texture = new THREE.Texture(canvas);
   texture.needsUpdate = true;
+  texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
 };
+
+export const createTextureFromImg = (
+  data: number[][][]
+): THREE.Texture => {
+  const height = data.length;
+  const width = data[0]?.length || 0;
+  const channels = data[0]?.[0]?.length || 1;
+
+  // console.table({ channels, width, height });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx || height === 0 || width === 0) return new THREE.Texture();
+
+  const imageData = ctx.createImageData(width, height);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+
+      if (channels === 1) {
+        const value = Math.floor(data[y][x][0] * 255);
+        imageData.data[i] = value;
+        imageData.data[i + 1] = value;
+        imageData.data[i + 2] = value;
+        imageData.data[i + 3] = value;
+      } else if (channels === 3) {
+        imageData.data[i] = Math.floor(data[y][x][0] * 255);
+        imageData.data[i + 1] = Math.floor(data[y][x][1] * 255);
+        imageData.data[i + 2] = Math.floor(data[y][x][2] * 255);
+        imageData.data[i + 3] = 255;
+      }
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+
+  const texture = new THREE.Texture(canvas);
+  texture.needsUpdate = true;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
 
 /**
  * Heatmap colormap (blue to red)

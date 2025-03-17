@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { Text } from '@react-three/drei';
 
 import { FeatureMap } from '../../types';
-import { createTextureFromData } from '../../../utils/visualization3d';
+import { createTextureFromGrayscaleImg } from '../../../utils/visualization3d';
 
 interface FeatureMapMeshProps {
   featureMap: FeatureMap;
@@ -33,7 +33,7 @@ const FeatureMapMesh = React.memo(
 
     useEffect(() => {
       if (materialRef.current && featureMap.activation_map) {
-        const texture = createTextureFromData(
+        const texture = createTextureFromGrayscaleImg(
           featureMap.activation_map,
           colormap
         );

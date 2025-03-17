@@ -15,6 +15,7 @@ export interface LayerData {
   padding?: [number, number];
   in_channels?: number;
   out_channels?: number;
+  cam?: number[][]; // class activation map for the layer
 
   // feature maps (activations)
   feature_maps?: number[][][]; // [channel][height][width]

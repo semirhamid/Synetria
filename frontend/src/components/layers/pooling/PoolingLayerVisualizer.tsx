@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { LayerData } from '../../types';
 import { Html, Text } from '@react-three/drei';
 import * as THREE from 'three';
-import { createTextureFromData, viridisColormap } from '../../../utils/visualization3d';
+import { createTextureFromGrayscaleImg, viridisColormap } from '../../../utils/visualization3d';
 
 interface PoolingLayerVisualizerProps {
   layer: LayerData;
@@ -47,7 +47,7 @@ const FeatureMapMesh = React.memo(({
   // Effect to update the texture when the feature map data changes
   useEffect(() => {
     if (materialRef.current && featureMap.activation_map) {
-      const texture = createTextureFromData(featureMap.activation_map, viridisColormap);
+      const texture = createTextureFromGrayscaleImg(featureMap.activation_map, viridisColormap);
 
       if (texture) {
         texture.colorSpace = THREE.SRGBColorSpace;

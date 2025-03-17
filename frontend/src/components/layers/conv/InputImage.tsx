@@ -1,66 +1,32 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
 
 interface InputImageVisualizerProps {
   position: [number, number, number];
-  inputImage: number[][][];
+  inputImageTexture: THREE.Texture;
+  width: number;
+  height: number;
+  channels: number;
 }
 
 export const InputImageVisualizer: React.FC<InputImageVisualizerProps> = ({
   position,
-  inputImage,
+  inputImageTexture,
+  width,
+  height,
+  channels,
 }) => {
-  const height = inputImage.length;
-  const width = inputImage[0]?.length || 0;
-  const channels = inputImage[0]?.[0]?.length || 1;
-
-
-  // console.table({ channels, width, height });
-
   const aspectRatio = width / height;
   const maxDimension = 4;
+
   const planeWidth =
     aspectRatio > 1 ? maxDimension : maxDimension * aspectRatio;
   const planeHeight =
     aspectRatio > 1 ? maxDimension / aspectRatio : maxDimension;
 
-  const texture = useMemo(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-
-    const ctx = canvas.getContext('2d');
-
-    if (!ctx || height === 0 || width === 0) return new THREE.Texture();
-
-    const imageData = ctx.createImageData(width, height);
-
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const i = (y * width + x) * 4;
-
-        if (channels === 1) {
-          const value = Math.floor(inputImage[y][x][0] * 255);
-          imageData.data[i] = value;
-          imageData.data[i + 1] = value;
-          imageData.data[i + 2] = value;
-          imageData.data[i + 3] = value;
-        } else if (channels === 3) {
-          imageData.data[i] = Math.floor(inputImage[y][x][0] * 255);
-          imageData.data[i + 1] = Math.floor(inputImage[y][x][1] * 255);
-          imageData.data[i + 2] = Math.floor(inputImage[y][x][2] * 255);
-          imageData.data[i + 3] = 255;
-        }
-      }
-    }
-
-    ctx.putImageData(imageData, 0, 0);
-
-    const texture = new THREE.Texture(canvas);
-    texture.needsUpdate = true;
-    return texture;
-  }, [inputImage, width, height, channels]);
+  const texture = inputImageTexture;
+  texture.colorSpace = THREE.SRGBColorSpace;
 
   return (
     <>
@@ -87,11 +53,6 @@ export const InputImageVisualizer: React.FC<InputImageVisualizerProps> = ({
             <div style={{ fontSize: '12px' }}>{`Channels: ${channels}`}</div>
           </div>
         </Html>
-
-        {/* <mesh position={[0, 0, -0.01]}>
-          <planeGeometry args={[planeWidth + 0.2, planeHeight + 0.2]} />
-          <meshBasicMaterial color="#333333" side={THREE.DoubleSide} />
-        </mesh> */}
 
         <mesh>
           <planeGeometry args={[planeWidth, planeHeight]} />

@@ -1,85 +1,50 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Stats } from '@react-three/drei';
 
 import LoadingComponent from './LoadingComponent';
-import LayerVisualizer from './layers/LayerVisualizer';
 import { Sidebar, SliderControls } from './SideBar';
-import {
-  LayerData,
-  ModelMetaData,
-  ModelStructure,
-  TrainingData,
-} from './types';
+import LayerVisualizer from './layers/LayerVisualizer';
+import { InputImageVisualizer } from './layers/conv/InputImage';
+
 import {
   DEFAULT_LAYER_SPACING,
   DEFAULT_NEURON_SPACING,
   DEFAULT_NODE_SIZE,
   LAYER_COLORS,
 } from '../constants';
-import { InputImageVisualizer } from './layers/conv/InputImage';
+import useNeuralNetworkData from '../hooks/useNeuralNetworkData';
+import { createTextureFromImg } from '../utils/visualization3d';
 
 const NeuralNetwork: React.FC = () => {
-  const [networkInputData, setNetworkInputData] = useState<number[][][] | null>(
-    null
-  );
-  const [networkData, setNetworkData] = useState<LayerData[] | null>(null);
-  const [modelMetadata, setModelMetadata] = useState<ModelStructure | null>(
-    null
-  );
-  const [metaData, setMetaData] = useState<ModelMetaData | null>(null);
-  const [currentEpoch, setCurrentEpoch] = useState<number>(0);
+  const {
+    networkInputData,
+    networkData,
+    modelMetadata,
+    metaData,
+    currentEpoch,
+  } = useNeuralNetworkData();
 
   const [layerSpacing, setLayerSpacing] = useState(DEFAULT_LAYER_SPACING);
   const [neuronSpacing, setNeuronSpacing] = useState(DEFAULT_NEURON_SPACING);
   const [nodeSize, setNodeSize] = useState(DEFAULT_NODE_SIZE);
 
-  // Process WebSocket data only once for each received data
-  const processWebSocketData = useCallback((receivedData: TrainingData) => {
-    if (receivedData.epoch && receivedData.layers) {
-      setNetworkData(receivedData.layers);
-      setModelMetadata(receivedData.model_structure);
-      setCurrentEpoch(receivedData.epoch);
+  const inputImageTexture = useMemo(() => {
+    if (networkInputData && networkInputData.type === 'image') {
+      const height = networkInputData.data.length;
+      const width = networkInputData.data[0]?.length || 0;
+      const channels = networkInputData.data[0].length || 1;
 
-      if (
-        receivedData.network_input !== null &&
-        receivedData.network_input.type == 'image'
-      ) {
-        setNetworkInputData(receivedData.network_input.data);
-      }
-
-      const metaData: ModelMetaData = {
-        epoch: receivedData.epoch,
-        batch: receivedData.batch,
-        batch_size: receivedData.batch_size,
-        learning_rate: receivedData.learning_rate,
-        loss: receivedData.loss,
+      // return createTextureFromImg(networkInputData.data);
+      return {
+        texture: createTextureFromImg(networkInputData.data),
+        height: height,
+        width: width,
+        channels: channels,
       };
-      setMetaData(metaData);
     }
-  }, []);
-
-  // WebSocket connection
-  useEffect(() => {
-    const socket = new WebSocket('ws://localhost:8000');
-
-    socket.onopen = () => console.log('WebSocket connection established');
-    socket.onmessage = (event) => {
-      try {
-        const receivedData: TrainingData = JSON.parse(event.data);
-        processWebSocketData(receivedData);
-      } catch (error) {
-        console.error('Error processing WebSocket data:', error);
-      }
-    };
-
-    socket.onclose = () => console.log('WebSocket connection closed');
-    socket.onerror = (error) => console.error('WebSocket error:', error);
-
-    return () => {
-      socket.close();
-    };
-  }, [processWebSocketData]);
+    return null;
+  }, [networkInputData]);
 
   if (!networkData || !modelMetadata) return <LoadingComponent />;
 
@@ -105,7 +70,6 @@ const NeuralNetwork: React.FC = () => {
       {/* Neural Network Visualization */}
       <div className="flex-1 max-h-screen max-w-full w-full">
         <Canvas
-          // gl={{ clearColor: "black" }}
           camera={{ fov: 50, position: [0, 0, 50] }}
           // style={{ background: 'black' }}
         >
@@ -115,10 +79,13 @@ const NeuralNetwork: React.FC = () => {
           <pointLight position={[10, 10, 10]} />
 
           {/* Render the input image as the first layer */}
-          {networkInputData && (
+          {networkInputData && inputImageTexture && (
             <InputImageVisualizer
               position={[0, 0, 0]}
-              inputImage={networkInputData}
+              inputImageTexture={inputImageTexture.texture}
+              width={inputImageTexture.width}
+              height={inputImageTexture.height}
+              channels={inputImageTexture.channels}
             />
           )}
 
@@ -137,6 +104,7 @@ const NeuralNetwork: React.FC = () => {
               neuronSpacing={neuronSpacing}
               nodeSize={nodeSize}
               colors={LAYER_COLORS}
+              inputImageTextureMap={inputImageTexture ? inputImageTexture.texture : null}
             />
           ))}
         </Canvas>

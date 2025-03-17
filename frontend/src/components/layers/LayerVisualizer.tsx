@@ -1,4 +1,5 @@
 import React from 'react';
+import * as THREE from 'three';
 
 import { LayerData } from '../types';
 
@@ -6,8 +7,18 @@ import DenseLayerVisualizer from './dense/DenseLayerVisualizer';
 import ConvLayerVisualizer from './conv/ConvLayerVisualizer';
 import PoolingLayerVisualizer from './conv/PoolingLayerVisualizer';
 
-// Memoized layer visualizer component to prevent unnecessary re-renders
-const LayerVisualizer = React.memo(
+interface LayerVisualizerProps {
+  layer: LayerData;
+  layerIndex: number;
+  nextLayer: LayerData | null;
+  layerSpacing: number;
+  neuronSpacing: number;
+  nodeSize: number;
+  colors: string[];
+  inputImageTextureMap: THREE.Texture | null;
+}
+
+const LayerVisualizer: React.FC<LayerVisualizerProps> = React.memo(
   ({
     layer,
     layerIndex,
@@ -16,6 +27,7 @@ const LayerVisualizer = React.memo(
     neuronSpacing,
     nodeSize,
     colors,
+    inputImageTextureMap,
   }: {
     layer: LayerData;
     layerIndex: number;
@@ -24,8 +36,8 @@ const LayerVisualizer = React.memo(
     neuronSpacing: number;
     nodeSize: number;
     colors: string[];
+    inputImageTextureMap: THREE.Texture | null;
   }) => {
-    // Determine which visualizer to use based on layer type
     const layerType = layer.type.toLowerCase();
 
     switch (layerType) {
@@ -55,6 +67,7 @@ const LayerVisualizer = React.memo(
             layerSpacing={layerSpacing}
             nodeSize={nodeSize}
             colors={colors}
+            inputImageTexture={inputImageTextureMap}
           />
         );
       case 'maxpool2d':

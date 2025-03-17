@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react';
+import * as THREE from 'three';
 import { Html, Text } from '@react-three/drei';
 
 import { LayerData, FeatureMap } from '../../types';
 import { FeatureMapMesh } from './FeatureMapVisualizer';
 import { viridisColormap } from '../../../utils/visualization3d';
+import { CamVisualizer } from './CamVisualizer';
 
 interface ConvLayerVisualizerProps {
   layer: LayerData;
@@ -12,6 +14,7 @@ interface ConvLayerVisualizerProps {
   layerSpacing: number;
   nodeSize: number;
   colors: string[];
+  inputImageTexture: THREE.Texture | null;
 }
 
 const ConvLayerVisualizer: React.FC<ConvLayerVisualizerProps> = ({
@@ -19,6 +22,7 @@ const ConvLayerVisualizer: React.FC<ConvLayerVisualizerProps> = ({
   layerIndex,
   layerSpacing,
   colors,
+  inputImageTexture,
 }) => {
   const [hoveredMap, setHoveredMap] = useState<number | null>(null);
   const layerColor = colors[layerIndex % colors.length];
@@ -28,9 +32,8 @@ const ConvLayerVisualizer: React.FC<ConvLayerVisualizerProps> = ({
     [layerIndex, layerSpacing]
   );
 
-  const { feature_maps, kernel_size, in_channels, out_channels } = layer;
+  const { feature_maps, kernel_size, in_channels, out_channels, cam } = layer;
 
-  // Memoize constants for feature map layout
   const layoutConfig = useMemo(
     () => ({
       mapSize: 5, // Size of each feature map
@@ -94,6 +97,16 @@ const ConvLayerVisualizer: React.FC<ConvLayerVisualizerProps> = ({
           </div>
         </div>
       </Html>
+
+      {/* Class Activation Map */}
+      {cam && cam.length > 0 && inputImageTexture && (
+        <CamVisualizer
+          position={[-5, 0, 0]}
+          inputImageTexture={inputImageTexture}
+          size={layoutConfig.mapSize}
+          cam={cam}
+        />
+      )}
 
       {/* Feature Maps Visualization */}
       {feature_maps && feature_maps.length > 0 && (
