@@ -71,6 +71,19 @@ export const jetColormap = (value: number): [number, number, number] => {
   return [Math.floor(r * 255), Math.floor(g * 255), Math.floor(b * 255)];
 };
 
+// /**
+//  * Jet colormap (blue to red via cyan and yellow)
+//  * @param value Normalized value (0-1)
+//  * @returns RGB color values (0-255)
+//  */
+// export const jetColormap = (value: number): [number, number, number] => {
+// 	const r = Math.floor(255 * Math.min(Math.max(1.5 - Math.abs(4 * value - 3), 0), 1));
+// 	const g = Math.floor(255 * Math.min(Math.max(1.5 - Math.abs(4 * value - 2), 0), 1));
+// 	const b = Math.floor(255 * Math.min(Math.max(1.5 - Math.abs(4 * value - 1), 0), 1));
+// 	return [r, g, b];
+// };
+
+
 /**
  * Plasma colormap using linear interpolation between predefined colors.
  * Approximate mapping based on known plasma values.
