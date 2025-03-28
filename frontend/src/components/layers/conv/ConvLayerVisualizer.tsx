@@ -2,13 +2,13 @@ import React, { useState, useMemo } from 'react';
 import * as THREE from 'three';
 import { Html, Text } from '@react-three/drei';
 
-import { LayerData, FeatureMap } from '../../types';
+import { LayerData, FeatureMap, ConvLayerData } from '../../types';
 import { FeatureMapMesh } from './FeatureMapVisualizer';
-import { viridisColormap } from '../../../utils/visualization3d';
 import { CamVisualizer } from './CamVisualizer';
+import { jetColormap } from '../../../utils/heatmaps';
 
 interface ConvLayerVisualizerProps {
-  layer: LayerData;
+  layer: ConvLayerData;
   layerIndex: number;
   nextLayer: LayerData | null;
   layerSpacing: number;
@@ -122,7 +122,7 @@ const ConvLayerVisualizer: React.FC<ConvLayerVisualizerProps> = ({
                   onHover={handleFeatureMapHover}
                   index={mapIndex}
                   isHovered={hoveredMap === mapIndex}
-                  colormap={viridisColormap}
+                  colormap={jetColormap}
                 />
 
                 {/* Hover information tooltip */}

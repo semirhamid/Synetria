@@ -1,34 +1,46 @@
 // Types
-export interface LayerData {
+export interface BaseLayerData {
   layer_name: string;
   type: string;
+  input_shape?: number[];
+  output_shape?: number[];
+}
 
-  // linear layer data
+export interface DenseLayerData extends BaseLayerData {
+  type: 'linear' | 'dense';
   weights: number[][];
   biases: number[];
   activations: number[];
+  gradients?: number[][];
+}
 
-  // conv layer data
-  filters?: number[][][][]; // [filter_index][in_channel][height][width]
-  kernel_size?: [number, number];
-  stride?: [number, number];
-  padding?: [number, number];
+export interface ConvLayerData extends BaseLayerData {
+  type: 'conv' | 'conv2d' | 'convolution';
+  filters: number[][][][]; // [filter_index][in_channel][height][width]
+  kernel_size: [number, number];
+  stride: [number, number];
+  padding: [number, number];
   in_channels?: number;
   out_channels?: number;
   cam?: number[][]; // class activation map for the layer
+  feature_maps?: FeatureMap[];
+}
 
-  // feature maps (activations)
-  feature_maps?: number[][][]; // [channel][height][width]
+export interface PoolingLayerData extends BaseLayerData {
+  type: 'pool' | 'maxpool' | 'avgpool' | 'maxpool2d' | 'avgpool2d';
+  pool_type: 'max' | 'avg';
+  kernel_size: [number, number];
+  stride: [number, number];
+  padding?: [number, number];
+  feature_maps?: FeatureMap[];
+}
 
-  // pooling layer data
-  pool_size?: [number, number];
-  pool_stride?: [number, number];
-  pool_padding?: [number, number];
-  pool_type?: 'max' | 'avg';
+// Union type for all layer types
+export type LayerData = DenseLayerData | ConvLayerData | PoolingLayerData;
 
-  // input data (for visualization)
-  input_shape?: number[];
-  output_shape?: number[];
+export interface FeatureMap {
+  channel_id: number;
+  activation_map: number[][];
 }
 
 export interface ModelStructure {
@@ -62,12 +74,21 @@ export interface ModelMetaData {
   loss: number;
 }
 
-export interface FeatureMap {
-  channel_id: number;
-  activation_map: number[][];
-}
-
 export interface NetworkInput {
   type: string;
   data: number[][][];
+}
+
+// Type guard functions to check layer types
+export function isDenseLayer(layer: LayerData): layer is DenseLayerData {
+  return layer.type === 'linear' || layer.type === 'dense';
+}
+
+export function isConvLayer(layer: LayerData): layer is ConvLayerData {
+  return layer.type === 'conv' || layer.type === 'conv2d' || layer.type === 'convolution';
+}
+
+export function isPoolingLayer(layer: LayerData): layer is PoolingLayerData {
+  return layer.type === 'pool' || layer.type === 'maxpool' || layer.type === 'avgpool' || 
+         layer.type === 'maxpool2d' || layer.type === 'avgpool2d';
 }

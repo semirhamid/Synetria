@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { jetColormap } from './heatmaps';
 
 /**
  * Creates a texture from a 2D array of values
@@ -8,7 +9,7 @@ import * as THREE from 'three';
  */
 export const createTextureFromGrayscaleImg = (
   data: number[][],
-  colorMap: (value: number) => [number, number, number] = heatmapColormap
+  colorMap: (value: number) => [number, number, number] = jetColormap
 ): THREE.Texture => {
   const height = data.length;
   const width = data[0]?.length || 0;
@@ -112,62 +113,3 @@ export const createTextureFromImg = (
   return texture;
 }
 
-/**
- * Heatmap colormap (blue to red)
- * @param value Normalized value (0-1)
- * @returns RGB color values (0-255)
- */
-export const heatmapColormap = (value: number): [number, number, number] => {
-  if (value < 0.5) {
-    // Blue to white gradient
-    const intensity = value * 2 * 255;
-    return [intensity, intensity, 255];
-  } else {
-    // White to red gradient
-    const intensity = (value - 0.5) * 2 * 255;
-    return [255, 255 - intensity, 255 - intensity];
-  }
-};
-
-/**
- * Viridis-like colormap (purple to yellow)
- * @param value Normalized value (0-1)
- * @returns RGB color values (0-255)
- */
-export const viridisColormap = (value: number): [number, number, number] => {
-  if (value < 0.33) {
-    // Purple to blue gradient
-    const t = value / 0.33;
-    return [
-      Math.floor(73 + t * (41 - 73)),
-      Math.floor(11 + t * (121 - 11)),
-      Math.floor(106 + t * (142 - 106)),
-    ];
-  } else if (value < 0.66) {
-    // Blue to green gradient
-    const t = (value - 0.33) / 0.33;
-    return [
-      Math.floor(41 + t * (33 - 41)),
-      Math.floor(121 + t * (181 - 121)),
-      Math.floor(142 + t * (74 - 142)),
-    ];
-  } else {
-    // Green to yellow gradient
-    const t = (value - 0.66) / 0.34;
-    return [
-      Math.floor(33 + t * (253 - 33)),
-      Math.floor(181 + t * (231 - 181)),
-      Math.floor(74 + t * (37 - 74)),
-    ];
-  }
-};
-
-/**
- * Greyscale colormap
- * @param value Normalized value (0-1)
- * @returns RGB color values (0-255)
- */
-export const greyscaleColormap = (value: number): [number, number, number] => {
-  const grey = Math.round(value * 255);
-  return [grey, grey, grey];
-};

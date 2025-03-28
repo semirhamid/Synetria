@@ -2,12 +2,12 @@ import * as THREE from 'three';
 import { Html, Text } from '@react-three/drei';
 import React, { useState, useMemo } from 'react';
 
-import { LayerData, FeatureMap } from '../../types';
+import { LayerData, FeatureMap, PoolingLayerData } from '../../types';
 import { FeatureMapMesh } from './FeatureMapVisualizer';
-import { heatmapColormap } from '../../../utils/visualization3d';
+import { jetColormap } from '../../../utils/heatmaps';
 
 interface PoolingLayerVisualizerProps {
-  layer: LayerData;
+  layer: PoolingLayerData;
   layerIndex: number;
   nextLayer: LayerData | null;
   layerSpacing: number;
@@ -28,7 +28,7 @@ const PoolingLayerVisualizer: React.FC<PoolingLayerVisualizerProps> = ({
     [layerIndex, layerSpacing]
   );
 
-  const { pool_size, pool_stride, pool_type, feature_maps } = layer;
+  const { kernel_size, stride, pool_type, feature_maps } = layer;
 
   const layoutConfig = useMemo(
     () => ({
@@ -99,10 +99,10 @@ const PoolingLayerVisualizer: React.FC<PoolingLayerVisualizerProps> = ({
           <div style={{ fontSize: '12px' }}>{`type: ${layer.type}`}</div>
           <div style={{ fontSize: '12px' }}>{`pool type: ${pool_type}`}</div>
           <div style={{ fontSize: '12px' }}>
-            {pool_type && pool_size
-              ? `${pool_type} ${pool_size[0]}x${pool_size[1]}`
+            {pool_type && kernel_size
+              ? `${pool_type} ${kernel_size[0]}x${kernel_size[1]}`
               : ''}
-            {pool_stride ? `, stride ${pool_stride[0]}x${pool_stride[1]}` : ''}
+            {stride ? `, stride ${stride[0]}x${stride[1]}` : ''}
           </div>
         </div>
       </Html>
@@ -121,7 +121,7 @@ const PoolingLayerVisualizer: React.FC<PoolingLayerVisualizerProps> = ({
                   onHover={handleFeatureMapHover}
                   index={mapIndex}
                   isHovered={hoveredMap === mapIndex}
-                  colormap={heatmapColormap}
+                  colormap={jetColormap}
                 />
 
                 {/* Hover information tooltip */}
@@ -153,7 +153,7 @@ const PoolingLayerVisualizer: React.FC<PoolingLayerVisualizerProps> = ({
                       </div>
                       <div>
                         Pool: {pool_type}{' '}
-                        {pool_size ? `${pool_size[0]}x${pool_size[1]}` : ''}
+                        {kernel_size ? `${kernel_size[0]}x${kernel_size[1]}` : ''}
                       </div>
                     </div>
                   </Html>

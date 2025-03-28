@@ -2,9 +2,8 @@ import React from 'react';
 import * as THREE from 'three';
 import {
   createTextureFromGrayscaleImg,
-  greyscaleColormap,
-  heatmapColormap,
 } from '../../../utils/visualization3d';
+import { jetColormap } from '../../../utils/heatmaps';
 
 interface CamVisualizerProps {
   position: [number, number, number];
@@ -19,9 +18,8 @@ export const CamVisualizer: React.FC<CamVisualizerProps> = ({
   size,
   cam,
 }) => {
-  console.log(cam);
   // Load the CAM Texture
-  const camTexture = createTextureFromGrayscaleImg(cam, heatmapColormap);
+  const camTexture = createTextureFromGrayscaleImg(cam, jetColormap);
   return (
     <>
       <group position={position}>

@@ -2,28 +2,44 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 import json
+import ujson
 import asyncio
 import websockets
 import numpy as np
 from typing import Dict, List, Any, Tuple
+import zmq
+import logging
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("trainer")
 
 class Trainer:
-    def __init__(self, port: int = 8000):
-        self.port = port  # to add websocket connection initiation later. the training shouldn't be dependent on if there's an active connection or not, it should just send the information if a connection is established.
+    def __init__(self, port: int = 5555):
+        """
+        Initialize the trainer with ZeroMQ publisher.
+        
+        Args:
+            port (int): ZeroMQ publisher port
+        """
+        self.port = port
+        self.context = zmq.Context()
+        self.publisher = self.context.socket(zmq.PUB)
+        zmq_endpoint = f"tcp://127.0.0.1:{port}"
+        self.publisher.bind(zmq_endpoint)
+        logger.info(f"Trainer initialized, ZeroMQ publisher bound to {zmq_endpoint}")
 
     async def train(
-        self, model, data_loader, criterion, optimizer, websocket, num_epochs=5
-    ): 
+        self, model, data_loader, criterion, optimizer, num_epochs=5
+    ):
         """
-        Main training method that coordinates the training process and sends data via WebSocket.
+        Main training method that coordinates the training process and sends data via ZeroMQ.
         """
-
         model_structure = self._get_model_structure(model)
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model = model.to(device)
-        print("Device: ", device)
+        logger.info(f"Training on device: {device}")
 
         # Training loop
         for epoch in range(num_epochs):
@@ -51,7 +67,7 @@ class Trainer:
                     "network_input": {
                         "type": "image",  # i'm not sure about how to do this yet
                         "data": (
-                            inputs[0].cpu().numpy().transpose(1,2,0).tolist()
+                            inputs[0].cpu().numpy().transpose(1, 2, 0).tolist()
                             if inputs[0].ndim > 1
                             else None
                         ),
@@ -60,14 +76,22 @@ class Trainer:
 
                 self._add_layer_data(model, activations, training_data)
 
-                await self._send_websocket_data(websocket, training_data)
+                # Send data via ZeroMQ
+                try:
+                    packed_data = ujson.dumps(training_data)
+                    self.publisher.send_string(packed_data)
+                    
+                    # Log progress
+                    if batch_idx % 100 == 0:
+                        logger.info(
+                            f"Train Epoch: {epoch+1}/{num_epochs} [{batch_idx * len(inputs)}/{len(data_loader.dataset)} "
+                            f"({100. * batch_idx / len(data_loader):.0f}%)]\tLoss: {loss.item():.6f}"
+                        )
+                except Exception as e:
+                    logger.error(f"Error sending data via ZeroMQ: {e}")
 
-                # logging
-                if batch_idx % 100 == 0:
-                    print(
-                        f"Train Epoch: {epoch} [{batch_idx * len(inputs)}/{len(data_loader.dataset)} "
-                        f"({100. * batch_idx / len(data_loader):.0f}%)]\tLoss: {loss.item():.6f}"
-                    )
+                # Small delay to prevent overwhelming the system
+                await asyncio.sleep(0.001)
 
     def _forward_with_activations(
         self, model, inputs
@@ -176,9 +200,13 @@ class Trainer:
     ) -> None:
         """Extract and add data for linear layers."""
         activation = activations[name]
-        
+
         # Average over the batch dimension (dim=0) to get a single value per node
-        averaged_activation = activation.mean(dim=0).detach().cpu().numpy().tolist() if activation is not None else None
+        averaged_activation = (
+            activation.mean(dim=0).detach().cpu().numpy().tolist()
+            if activation is not None
+            else None
+        )
 
         layer_data = {
             "layer_name": name,
@@ -187,7 +215,7 @@ class Trainer:
             "gradients": (
                 module.weight.grad.tolist() if module.weight.grad is not None else None
             ),
-            "activations": averaged_activation  # updated to send averaged activation per node
+            "activations": averaged_activation,  # updated to send averaged activation per node
         }
 
         if module.bias is not None:
@@ -301,9 +329,11 @@ class Trainer:
     async def _send_websocket_data(self, websocket, data) -> None:
         """Send data to the client via WebSocket with error handling."""
         try:
-            await websocket.send(json.dumps(data))
-            # await asyncio.sleep(0.1) 
-            # pass
+            packed_data = ujson.dumps(data)
+            # packed_data = json.dumps(data)
+            await websocket.send(packed_data)
+            # await asyncio.sleep(0.1)
+            pass
         except websockets.exceptions.ConnectionClosed as e:
             print(f"WebSocket connection closed: {e}")
             raise  # Re-raise to let caller handle the disconnect

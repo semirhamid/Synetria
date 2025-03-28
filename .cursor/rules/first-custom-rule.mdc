@@ -1,0 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# For changes to the data formatting and what is sent from the backend [trainer.py](mdc:backend/app/training/trainer.py).
+
+Do not remove/reduce/alter the type of data sent. I do not want you to reduce the amount of functionality the app has unless i explicitly state it. Focus on improving it instead.

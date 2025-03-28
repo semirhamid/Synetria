@@ -48,10 +48,11 @@ const useNeuralNetworkData = (): UseNeuralNetworkDataResult => {
   }, []);
 
   useEffect(() => {
-    const socket = new WebSocket('ws://localhost:8000');
+    // const socket = new WebSocket('ws://localhost:8000');
+    const eventSource = new EventSource('http://localhost:8000/stream');
 
-    socket.onopen = () => console.log('WebSocket connection established');
-    socket.onmessage = (event) => {
+    eventSource.onopen = () => console.log('WebSocket connection established');
+    eventSource.onmessage = (event) => {
       try {
         const receivedData: TrainingData = JSON.parse(event.data);
         // console.log(`incoming data: `, receivedData)
@@ -60,12 +61,10 @@ const useNeuralNetworkData = (): UseNeuralNetworkDataResult => {
         console.error('Error processing WebSocket data:', error);
       }
     };
-
-    socket.onclose = () => console.log('WebSocket connection closed');
-    socket.onerror = (error) => console.error('WebSocket error:', error);
+    eventSource.onerror = (error) => console.error('WebSocket error:', error);
 
     return () => {
-      socket.close();
+      eventSource.close();
     };
   }, [processWebSocketData]);
 

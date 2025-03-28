@@ -1,11 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Stats } from '@react-three/drei';
+import * as THREE from 'three';
 
 import LoadingComponent from './LoadingComponent';
 import { Sidebar, SliderControls } from './SideBar';
-import LayerVisualizer from './layers/LayerVisualizer';
-import { InputImageVisualizer } from './layers/conv/InputImage';
+import DenseLayerVisualizer from './layers/dense/DenseLayerVisualizer';
+import ConvLayerVisualizer from './layers/conv/ConvLayerVisualizer';
+import PoolingLayerVisualizer from './layers/conv/PoolingLayerVisualizer';
+import InputLayerVisualizer from './layers/InputLayerVisualizer';
 
 import {
   DEFAULT_LAYER_SPACING,
@@ -15,6 +18,8 @@ import {
 } from '../constants';
 import useNeuralNetworkData from '../hooks/useNeuralNetworkData';
 import { createTextureFromImg } from '../utils/visualization3d';
+import { isDenseLayer, isConvLayer, isPoolingLayer, LayerData } from './types';
+import { Perf } from 'r3f-perf';
 
 const NeuralNetwork: React.FC = () => {
   const {
@@ -29,24 +34,67 @@ const NeuralNetwork: React.FC = () => {
   const [neuronSpacing, setNeuronSpacing] = useState(DEFAULT_NEURON_SPACING);
   const [nodeSize, setNodeSize] = useState(DEFAULT_NODE_SIZE);
 
-  const inputImageTexture = useMemo(() => {
+  const inputImageTexture = useMemo<THREE.Texture | null>(() => {
     if (networkInputData && networkInputData.type === 'image') {
-      const height = networkInputData.data.length;
-      const width = networkInputData.data[0]?.length || 0;
-      const channels = networkInputData.data[0].length || 1;
-
-      // return createTextureFromImg(networkInputData.data);
-      return {
-        texture: createTextureFromImg(networkInputData.data),
-        height: height,
-        width: width,
-        channels: channels,
-      };
+      return createTextureFromImg(networkInputData.data);
     }
     return null;
   }, [networkInputData]);
 
   if (!networkData || !modelMetadata) return <LoadingComponent />;
+
+  // Function to render the correct layer component based on layer type
+  const renderLayerComponent = (
+    layer: LayerData,
+    layerIndex: number,
+    nextLayer: LayerData | null
+  ) => {
+    if (isDenseLayer(layer)) {
+      return (
+        <DenseLayerVisualizer
+          key={`layer-${layerIndex}`}
+          layer={layer}
+          layerIndex={layerIndex}
+          nextLayer={nextLayer}
+          layerSpacing={layerSpacing}
+          neuronSpacing={neuronSpacing}
+          nodeSize={nodeSize}
+          colors={LAYER_COLORS}
+        />
+      );
+    } else if (isConvLayer(layer)) {
+      return (
+        <ConvLayerVisualizer
+          key={`layer-${layerIndex}`}
+          layer={layer}
+          layerIndex={layerIndex}
+          nextLayer={nextLayer}
+          layerSpacing={layerSpacing}
+          nodeSize={nodeSize}
+          colors={LAYER_COLORS}
+          inputImageTexture={inputImageTexture}
+        />
+      );
+    } else if (isPoolingLayer(layer)) {
+      return (
+        <PoolingLayerVisualizer
+          key={`layer-${layerIndex}`}
+          layer={layer}
+          layerIndex={layerIndex}
+          nextLayer={nextLayer}
+          layerSpacing={layerSpacing}
+          nodeSize={nodeSize}
+          colors={LAYER_COLORS}
+        />
+      );
+    }
+
+    // If we reach here, we have an unknown layer type
+    // Using a type assertion to safely access the type property
+    const unknownLayer = layer as { type: string };
+    console.warn(`Unsupported layer type: ${unknownLayer.type}`);
+    return null;
+  };
 
   return (
     <div className="flex overflow-y-hidden max-h-screen">
@@ -73,40 +121,30 @@ const NeuralNetwork: React.FC = () => {
           camera={{ fov: 50, position: [0, 0, 50] }}
           // style={{ background: 'black' }}
         >
-          <Stats />
+          {/* <Stats /> */}
+          <Perf />
           <OrbitControls enableDamping dampingFactor={0.1} />
           <ambientLight intensity={0.5} />
           <pointLight position={[10, 10, 10]} />
 
-          {/* Render the input image as the first layer */}
-          {networkInputData && inputImageTexture && (
-            <InputImageVisualizer
+          {/* Render the input layer independently */}
+          {networkInputData && (
+            <InputLayerVisualizer
+              inputData={networkInputData}
               position={[0, 0, 0]}
-              inputImageTexture={inputImageTexture.texture}
-              width={inputImageTexture.width}
-              height={inputImageTexture.height}
-              channels={inputImageTexture.channels}
+              texture={inputImageTexture}
             />
           )}
 
-          {/* Render network layers using memoized components */}
-          {networkData.map((layer, layerIndex) => (
-            <LayerVisualizer
-              key={`layer-${layerIndex}`}
-              layer={layer}
-              layerIndex={layerIndex + 1}
-              nextLayer={
-                layerIndex < networkData.length - 1
-                  ? networkData[layerIndex + 1]
-                  : null
-              }
-              layerSpacing={layerSpacing}
-              neuronSpacing={neuronSpacing}
-              nodeSize={nodeSize}
-              colors={LAYER_COLORS}
-              inputImageTextureMap={inputImageTexture ? inputImageTexture.texture : null}
-            />
-          ))}
+          {/* Render network layers directly based on their type */}
+          {networkData.map((layer, layerIndex) => {
+            const nextLayer =
+              layerIndex < networkData.length - 1
+                ? networkData[layerIndex + 1]
+                : null;
+
+            return renderLayerComponent(layer, layerIndex + 1, nextLayer);
+          })}
         </Canvas>
       </div>
     </div>

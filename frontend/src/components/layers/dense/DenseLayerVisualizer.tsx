@@ -1,12 +1,12 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
-import { LayerData } from '../../types';
+import { DenseLayerData, isDenseLayer, LayerData } from '../../types';
 import { Html, Instance, Instances } from '@react-three/drei';
 import * as THREE from 'three';
 import Edge from './Edge';
 import BatchedEdges from './BatchedEdges';
 
 interface DenseLayerVisualizerProps {
-  layer: LayerData;
+  layer: DenseLayerData;
   layerIndex: number;
   nextLayer: LayerData | null;
   layerSpacing: number;
@@ -75,25 +75,6 @@ const DenseLayerVisualizer: React.FC<DenseLayerVisualizerProps> = ({
     });
   }, [layer, layerIndex, layerSpacing, neuronSpacing]);
 
-  // Memoize the next layer positions for connections (if needed)
-  const nextLayerPositions = useMemo(() => {
-    if (!nextLayer) return [];
-
-    const numNeurons = nextLayer.biases ? nextLayer.biases.length : 0;
-    const totalHeight = (numNeurons - 1) * neuronSpacing;
-    const startY = -totalHeight / 2;
-
-    return Array.from(
-      { length: numNeurons },
-      (_, neuronIndex) =>
-        [
-          (layerIndex + 1) * layerSpacing,
-          startY + neuronIndex * neuronSpacing,
-          0,
-        ] as [number, number, number]
-    );
-  }, [nextLayer, layerIndex, layerSpacing, neuronSpacing]);
-
   // Update node color/size based on bias values
   useEffect(() => {
     if (!nodesRef.current) return;
@@ -128,10 +109,28 @@ const DenseLayerVisualizer: React.FC<DenseLayerVisualizerProps> = ({
     }
   }, [layer.activations, neuronPositions, nodeSize, colors, layerIndex]);
 
+  // Memoize the next layer positions for connections (if needed)
+  const nextLayerPositions = useMemo(() => {
+    if (!nextLayer || !isDenseLayer(nextLayer)) return [];
+
+    const numNeurons = nextLayer.biases ? nextLayer.biases.length : 0;
+    const totalHeight = (numNeurons - 1) * neuronSpacing;
+    const startY = -totalHeight / 2;
+
+    return Array.from(
+      { length: numNeurons },
+      (_, neuronIndex) =>
+        [
+          (layerIndex + 1) * layerSpacing,
+          startY + neuronIndex * neuronSpacing,
+          0,
+        ] as [number, number, number]
+    );
+  }, [nextLayer, layerIndex, layerSpacing, neuronSpacing]);
   // for optimization: only render edges when needed
   // (e.g., when hovering over a node or after training is complete)
   const positiveEdges = useMemo(() => {
-    if (!nextLayer || !nextLayer.weights) {
+    if (!nextLayer || !isDenseLayer(nextLayer)) {
       return;
     }
     const positions: number[] = [];
@@ -152,7 +151,7 @@ const DenseLayerVisualizer: React.FC<DenseLayerVisualizerProps> = ({
   }, [nextLayer, neuronPositions, nextLayerPositions]);
 
   const negativeEdges = useMemo(() => {
-    if (!nextLayer || !nextLayer.weights) {
+    if (!nextLayer || !isDenseLayer(nextLayer)) {
       return;
     }
     const positions: number[] = [];
@@ -172,9 +171,11 @@ const DenseLayerVisualizer: React.FC<DenseLayerVisualizerProps> = ({
     return positions;
   }, [nextLayer, neuronPositions, nextLayerPositions]);
 
-  // const shouldRenderEdges =
-  //   hoveredNode !== null ||
-  //   neuronPositions.length * nextLayerPositions.length < 800;
+  const shouldRenderEdges =
+    nextLayer &&
+    isDenseLayer(nextLayer) &&
+    (hoveredNode !== null ||
+      neuronPositions.length * nextLayerPositions.length < 2000);
 
   return (
     <group>
@@ -206,7 +207,7 @@ const DenseLayerVisualizer: React.FC<DenseLayerVisualizerProps> = ({
             neuronPositions[hoveredNode].position[1],
             neuronPositions[hoveredNode].position[2],
           ]}
-          pointerEvents='none'
+          pointerEvents="none"
         >
           <div
             style={{
@@ -230,32 +231,36 @@ const DenseLayerVisualizer: React.FC<DenseLayerVisualizerProps> = ({
       )}
 
       {/* Render connections in batches, with positive and negative edges. And render the true edges on hover */}
-      {hoveredNode === null && positiveEdges && negativeEdges ? (
+      {shouldRenderEdges && (
         <>
-          <BatchedEdges positions={positiveEdges} color="blue" />
-          <BatchedEdges positions={negativeEdges} color="red" />
-        </>
-      ) : (
-        <>
-          {nextLayer?.weights.map((neuronWeights, targetIndex) =>
-            neuronWeights.map((weight, sourceIndex) => {
-              if (hoveredNode !== null && sourceIndex !== hoveredNode)
-                return null;
+          {hoveredNode === null && positiveEdges && negativeEdges ? (
+            <>
+              <BatchedEdges positions={positiveEdges} color="blue" />
+              <BatchedEdges positions={negativeEdges} color="red" />
+            </>
+          ) : (
+            <>
+              {nextLayer?.weights.map((neuronWeights, targetIndex) =>
+                neuronWeights.map((weight, sourceIndex) => {
+                  if (hoveredNode !== null && sourceIndex !== hoveredNode)
+                    return null;
 
-              const sourcePosition = neuronPositions[sourceIndex]?.position;
-              const targetPosition = nextLayerPositions[targetIndex];
+                  const sourcePosition = neuronPositions[sourceIndex]?.position;
+                  const targetPosition = nextLayerPositions[targetIndex];
 
-              if (!sourcePosition || !targetPosition) return null;
+                  if (!sourcePosition || !targetPosition) return null;
 
-              return (
-                <Edge
-                  key={`edge-${layerIndex}-${sourceIndex}-${targetIndex}`}
-                  sourcePosition={sourcePosition}
-                  targetPosition={targetPosition}
-                  weight={weight}
-                />
-              );
-            })
+                  return (
+                    <Edge
+                      key={`edge-${layerIndex}-${sourceIndex}-${targetIndex}`}
+                      sourcePosition={sourcePosition}
+                      targetPosition={targetPosition}
+                      weight={weight}
+                    />
+                  );
+                })
+              )}
+            </>
           )}
         </>
       )}
