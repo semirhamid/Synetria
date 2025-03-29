@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Line } from '@react-three/drei';
-import { Html } from '@react-three/drei'; // For displaying tooltips
+import LayerInfoTooltip from '../Tooltip';
 
 interface EdgeProps {
   sourcePosition: [number, number, number];
@@ -13,7 +13,7 @@ const Edge: React.FC<EdgeProps> = ({
   targetPosition,
   weight,
 }) => {
-  const [hovered, setHovered] = useState(false); // Track hover state
+  const [hovered, setHovered] = useState(false);
 
   if (!sourcePosition || !targetPosition) {
     console.warn('Edge: sourcePosition or targetPosition is undefined', { sourcePosition, targetPosition });
@@ -25,7 +25,7 @@ const Edge: React.FC<EdgeProps> = ({
   const absWeight = Math.abs(weight);
   const opacity = Math.max(0.5, Math.min(1.0, absWeight));
   
-  // Determine line width based on weight (but keepin it reasonable)
+  // Determine line width based on weight (but keeping it reasonable)
   const lineWidth = Math.max(0.3, Math.min(3.0, absWeight * 3));
 
   // Midpoint calculation for placing the tooltip
@@ -47,19 +47,13 @@ const Edge: React.FC<EdgeProps> = ({
         onPointerOut={() => setHovered(false)} // Hide tooltip on hover end
       />
       {hovered && (
-        <Html
-          position={midPoint} // Place tooltip at the midpoint of the line
-          style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
-            color: 'white',
-            padding: '5px 10px',
-            borderRadius: '5px',
-            fontSize: '12px',
-            whiteSpace: 'nowrap',
-          }}
+        <LayerInfoTooltip
+          position={midPoint}
+          fontSize={0.15}
+          maxWidth={2}
         >
-          Weight: {weight.toFixed(2)} {/* Display the weight value */}
-        </Html>
+          <div>Weight: {weight.toFixed(2)}</div>
+        </LayerInfoTooltip>
       )}
     </>
   );

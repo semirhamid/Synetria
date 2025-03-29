@@ -1,74 +1,74 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  LayerData,
-  ModelMetaData,
   ModelStructure,
   NetworkInput,
   TrainingData,
+  TrainingMetadata,
+  TrainingParams,
 } from '../components/types';
+import { LayerData } from '../components/layers/layers.types';
+import { mockData } from './mockData';
 
-interface UseNeuralNetworkDataResult {
-  networkInputData: NetworkInput | null;
-  networkData: LayerData[] | null;
-  modelMetadata: ModelStructure | null;
-  metaData: ModelMetaData | null;
-  currentEpoch: number;
+export interface NeuralNetworkData {
+  trainingMetadata: TrainingMetadata | null;
+  trainingParams: TrainingParams | null;
+  modelStructure: ModelStructure | null;
+  networkInput: NetworkInput | null;
+  layerData: LayerData[] | null;
 }
 
-const useNeuralNetworkData = (): UseNeuralNetworkDataResult => {
-  const [networkInputData, setNetworkInputData] = useState<NetworkInput | null>(null);
-  const [networkData, setNetworkData] = useState<LayerData[] | null>(null);
-  const [modelMetadata, setModelMetadata] = useState<ModelStructure | null>(null);
-  const [metaData, setMetaData] = useState<ModelMetaData | null>(null);
-  const [currentEpoch, setCurrentEpoch] = useState<number>(0);
+const useNeuralNetworkData = (): NeuralNetworkData => {
+  const [trainingMetadata, setTrainingMetadata] =
+    useState<TrainingMetadata | null>(null);
+  const [trainingParams, setTrainingParams] = useState<TrainingParams | null>(
+    null
+  );
+  const [modelStructure, setModelStructure] = useState<ModelStructure | null>(
+    null
+  );
+  const [networkInput, setNetworkInput] = useState<NetworkInput | null>(null);
+  const [layerData, setLayerData] = useState<LayerData[] | null>(null);
 
-  
   const processWebSocketData = useCallback((receivedData: TrainingData) => {
-    if (receivedData.epoch && receivedData.layers) {
-      setNetworkData(receivedData.layers);
-      setModelMetadata(receivedData.model_structure);
-      setCurrentEpoch(receivedData.epoch);
-      
-      if (
-        receivedData.network_input !== null &&
-        receivedData.network_input.type == 'image'
-      ) {
-        setNetworkInputData(receivedData.network_input)
-      }
-
-      const metaData: ModelMetaData = {
-        epoch: receivedData.epoch,
-        batch: receivedData.batch,
-        batch_size: receivedData.batch_size,
-        learning_rate: receivedData.learning_rate,
-        loss: receivedData.loss,
-      };
-      setMetaData(metaData);
-    }
+    setTrainingMetadata(receivedData.metadata);
+    setTrainingParams(receivedData.parameters);
+    setModelStructure(receivedData.model_structure);
+    setNetworkInput(receivedData.network_input);
+    setLayerData(receivedData.layers);
   }, []);
 
   useEffect(() => {
-    // const socket = new WebSocket('ws://localhost:8000');
+    // Mock Data for dev. 
+    processWebSocketData(mockData as unknown as TrainingData);
+    return;
+
+    // Using Server Sent Events instead of websockets for (slight) performance gains.
     const eventSource = new EventSource('http://localhost:8000/stream');
 
-    eventSource.onopen = () => console.log('WebSocket connection established');
+    eventSource.onopen = () => console.log('Connection established...');
     eventSource.onmessage = (event) => {
       try {
         const receivedData: TrainingData = JSON.parse(event.data);
-        // console.log(`incoming data: `, receivedData)
+        console.log(receivedData);
         processWebSocketData(receivedData);
       } catch (error) {
-        console.error('Error processing WebSocket data:', error);
+        console.error('Error processing Server data:', error);
       }
     };
-    eventSource.onerror = (error) => console.error('WebSocket error:', error);
+    eventSource.onerror = (error) => console.error('Connection error:', error);
 
     return () => {
       eventSource.close();
     };
   }, [processWebSocketData]);
 
-  return { networkInputData, networkData, modelMetadata, metaData, currentEpoch };
+  return {
+    trainingMetadata,
+    trainingParams,
+    networkInput,
+    layerData,
+    modelStructure,
+  };
 };
 
 export default useNeuralNetworkData;

@@ -8,6 +8,7 @@ import ujson
 import zmq
 
 import logging
+import asyncio  # added for asynchronous offloading
 from typing import Dict, List, Any, Tuple
 
 # Set up logging
@@ -29,6 +30,9 @@ class Trainer:
         self.publisher = self.context.socket(zmq.PUB)
         zmq_endpoint = f"tcp://127.0.0.1:{port}"
         self.publisher.bind(zmq_endpoint)
+        self.publisher.setsockopt(
+            zmq.SNDHWM, 1
+        )  # added to lower the send high-water mark
         logger.info(f"Trainer initialized, ZeroMQ publisher bound to {zmq_endpoint}")
 
         self.hooks = []
@@ -60,8 +64,8 @@ class Trainer:
         self._register_forward_hooks()
         self._register_backward_hooks()
 
-        model_structure = self._get_model_structure()
-        conv_layers = [
+        self.model_structure = self._get_model_structure()
+        self.conv_layers = [
             name
             for name, module in self.model.named_modules()
             if isinstance(module, nn.Conv2d)
@@ -73,47 +77,21 @@ class Trainer:
                 inputs, targets = inputs.to(device), targets.to(device)
 
                 self.optimizer.zero_grad()
-
                 outputs = self.model(inputs)
 
                 loss = self.criterion(outputs, targets)
                 loss.backward()
                 self.optimizer.step()
 
-                # Prepare metadata
-                training_data = {
-                    "epoch": epoch + 1,  # 1-indexed
-                    "batch": batch_idx + 1,  # 1-indexed
-                    "loss": loss.item(),
-                    "total_epochs": num_epochs,
-                    "learning_rate": optimizer.param_groups[0]["lr"],
-                    "batch_size": inputs.size(0),
-                    "model_structure": model_structure,
-                    "layers": [],
-                    "network_input": {
-                        "type": "image",  # i'm not sure about how to do this yet
-                        "data": (
-                            inputs[0].cpu().numpy().transpose(1, 2, 0).tolist()
-                            if inputs[0].ndim > 1
-                            else None
-                        ),
-                    },
-                }
-
-                cams = self._get_gradcam_activations(conv_layers)
-                self._add_layer_data(self.activations, training_data, cams)
-
-                try:  # Send data via ZeroMQ
-                    packed_data = ujson.dumps(training_data)
-                    self.publisher.send_string(packed_data)
-
-                    if batch_idx % 100 == 0:
-                        logger.info(
-                            f"Train Epoch: {epoch+1}/{num_epochs} [{batch_idx * len(inputs)}/{len(data_loader.dataset)} "
-                            f"({100. * batch_idx / len(data_loader):.0f}%)]\tLoss: {loss.item():.6f}"
-                        )
-                except Exception as e:
-                    logger.error(f"Error sending data via ZeroMQ: {e}")
+                if batch_idx % 100 == 0:
+                    logger.info(
+                        f"Train Epoch: {epoch+1}/{self.num_epochs}"
+                        + f"[{batch_idx * len(inputs)}/{len(data_loader.dataset)}"
+                        + f"({100. * batch_idx / len(data_loader):.0f}%)]\tLoss: {loss.item():.6f}"
+                    )
+                    await self._send_training_data(
+                        epoch, loss, batch_idx, len(inputs), inputs[0]
+                    )
 
                 self.activations.clear()
                 self.gradients.clear()
@@ -122,6 +100,42 @@ class Trainer:
                 # await asyncio.sleep(0.001)
 
         self._remove_hooks()
+
+    async def _send_training_data(
+        self,
+        epoch: int,
+        loss: float,
+        batch_idx: int,
+        batch_size: int,
+        input: torch.Tensor,
+    ) -> None:
+        """
+        Prepare and send training data via ZeroMQ.
+        """
+
+        training_data = {
+            "parameters": {
+                "total_epochs": self.num_epochs,
+                "learning_rate": self.optimizer.param_groups[0]["lr"],
+                "total_batches": len(self.data_loader),
+                "batch_size": batch_size,
+            },
+            "metadata": {
+                "epoch": epoch + 1,  # 1-indexed
+                "batch": batch_idx + 1,  # 1-indexed
+                "loss": loss.item(),
+            },
+            "model_structure": self.model_structure,
+            "network_input": self._prepare_input_data(input),
+            "layers": [],
+        }
+
+        cams = self._get_gradcam_activations(self.conv_layers)
+        self._add_layer_data(self.activations, training_data, cams)
+        try:  # Send data via ZeroMQ without blocking the main thread
+            await asyncio.to_thread(self._transmit_data, training_data)  # changed code
+        except Exception as e:
+            logger.error(f"Error sending data via ZeroMQ: {e}")
 
     def _prepare_input_data(self, input_tensor: torch.Tensor) -> Dict[str, Any]:
         """Prepares input data for visualization."""
@@ -276,7 +290,7 @@ class Trainer:
                 pass
 
     def _add_linear_layer_data(
-        self, name, module: nn.Linear, activations, training_data
+        self, name, layer: nn.Linear, activations, training_data
     ) -> None:
         """Extract and add data for linear layers."""
         if name not in activations:
@@ -288,27 +302,29 @@ class Trainer:
         avg_activation = activation.mean(dim=0).detach().cpu().numpy()
 
         # Convert weights and biases to numpy for more efficient serialization
-        weights_np = module.weight.data.detach().cpu().numpy()
+        weights_np = layer.weight.data.detach().cpu().numpy()
 
         layer_data = {
             "layer_name": name,
             "type": "linear",
+            "in_features": layer.in_features,
+            "out_features": layer.out_features,
             "weights": weights_np.tolist(),
             "activations": avg_activation.tolist(),
         }
 
         # Add gradients if available
-        if module.weight.grad is not None:
-            layer_data["gradients"] = module.weight.grad.detach().cpu().numpy().tolist()
+        if layer.weight.grad is not None:
+            layer_data["gradients"] = layer.weight.grad.detach().cpu().numpy().tolist()
 
         # Add biases if available
-        if module.bias is not None:
-            layer_data["biases"] = module.bias.data.detach().cpu().numpy().tolist()
+        if layer.bias is not None:
+            layer_data["biases"] = layer.bias.data.detach().cpu().numpy().tolist()
 
         training_data["layers"].append(layer_data)
 
     def _add_conv_layer_data(
-        self, name, module, activations, training_data, cams
+        self, name, layer, activations, training_data, cams
     ) -> None:
         """Extract and add data for a convolutional layer."""
         # Skip if no activations for this layer
@@ -319,7 +335,7 @@ class Trainer:
         feature_maps = self._get_feature_maps(name, activations)
 
         # Convert filters to numpy for serialization
-        filters_np = module.weight.data.detach().cpu().numpy()
+        filters_np = layer.weight.data.detach().cpu().numpy()
 
         # Create conv layer data structure
         conv_layer_data = {
@@ -327,18 +343,29 @@ class Trainer:
             "type": "conv",
             "filters": filters_np.tolist(),
             "feature_maps": feature_maps,
-            "kernel_size": list(module.kernel_size),
-            "stride": list(module.stride),
-            "padding": list(module.padding),
-            "in_channels": module.in_channels,
-            "out_channels": module.out_channels,
+            "kernel_size": list(layer.kernel_size),
+            "stride": list(layer.stride),
+            "padding": list(layer.padding),
+            "input_shape": [
+                layer.in_channels,
+                activations[name].shape[2],
+                activations[name].shape[3],
+            ],
+            "output_shape": [
+                layer.out_channels,
+                activations[name].shape[2],
+                activations[name].shape[3],
+            ],
+            # TODO: REMOVE
+            "in_channels": layer.in_channels,
+            "out_channels": layer.out_channels,
         }
 
         # Add output shape
         act = activations[name]
         if act.dim() >= 4:  # Ensure it has expected dimensions
             conv_layer_data["output_shape"] = [
-                module.out_channels,
+                layer.out_channels,
                 act.shape[2],
                 act.shape[3],
             ]
@@ -411,7 +438,12 @@ class Trainer:
             feature_map = {
                 "channel_id": channel_idx,
                 "activation_map": channel_data.tolist(),
+                "shape": channel_data.shape
             }
             feature_maps.append(feature_map)
 
         return feature_maps
+
+    def _transmit_data(self, training_data: Dict[str, Any]) -> None:
+        packed_data = ujson.dumps(training_data)
+        self.publisher.send_string(packed_data)  # changed code

@@ -1,8 +1,6 @@
 import React from 'react';
 import * as THREE from 'three';
-import {
-  createTextureFromGrayscaleImg,
-} from '../../../utils/visualization3d';
+import { createTextureFromGrayscaleImg } from '../../../utils/visualization3d';
 import { jetColormap } from '../../../utils/heatmaps';
 
 interface CamVisualizerProps {
@@ -12,11 +10,6 @@ interface CamVisualizerProps {
   cam: number[][];
 }
 
-/**
- * Component to visualize GradCAM (Gradient-weighted Class Activation Mapping)
- * A technique for visualizing the regions of the image that are important for the network's decision.
- * It overlays a heatmap over the original image to show activation hotspots.
- */
 export const CamVisualizer: React.FC<CamVisualizerProps> = ({
   position,
   inputImageTexture,

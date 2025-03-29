@@ -1,173 +1,18 @@
 # Synetria: Neural Network Visualization Tool
 
-## Project Overview
+## TODO
 
-Synetria is a real-time neural network visualization tool designed to help developers gain insights into their neural networks during training. The project aims to provide an intuitive and interactive way to visualize various types of neural networks, starting with MLPs (Multi-Layer Perceptrons) and expanding to CNNs (Convolutional Neural Networks).
-
-The key goal is to serve as a development tool that helps developers understand how their networks learn and behave during training. Rather than being just a static visualization tool, Synetria provides real-time insights into the training process, showing how weights, activations, and other network parameters evolve over time.
-
-## Current Implementation
-
-### Backend (Python/PyTorch)
-
-The backend is built as a wrapper around PyTorch models, designed to be minimally invasive to existing training workflows. Key components include:
-
-1. **Trainer Class**
-   - Handles model training and data extraction
-   - Uses PyTorch hooks to capture layer activations
-   - Supports both MLP and CNN architectures
-   - Extracts detailed information about:
-     - Layer weights and biases
-     - Convolutional filters
-     - Feature maps
-     - Network structure metadata
-
-2. **WebSocket Communication**
-   - Real-time data streaming to frontend
-   - JSON payload structure
-
-3. **Model Support**
-   - Currently supports:
-     - Linear (Dense) layers
-     - Convolutional layers (Conv2D)
-     - Pooling layers (MaxPool2D, AvgPool2D)
-   - Extensible architecture for adding new layer types
-
-#### To run the backend
-
-```
-   cd backend
-   python ./main.py
-```
-
-Currently, the backend server runs first, and upon connection, runs the training (it's how semir implemented it). This means a connection is necessary for the model training to run.
-This will need to change. Make the trainer run, which will spin up a websocket and send the progress thru it. if there is no connection established, it should still proceed
-
-### Frontend (React/TypeScript)
-
-The frontend provides an interactive visualization environment built with React and Three.js. Components include:
-
-1. **Network Visualization**
-   - Interactive 3D visualization for MLPs
-   - 2D visualization for CNNs
-   - Real-time updates during training
-
-2. **Layer-specific Components**
-   - `Node.tsx`: Visualizes neurons
-   - `Edge.tsx`: Visualizes connections between neurons
-   - `ConvFilter.tsx`: Visualizes convolutional filters
-   - `FeatureMap.tsx`: Visualizes activation maps
-   - `PoolingLayer.tsx`: Visualizes pooling operations
-
-3. **UI/UX Features**
-   - Interactive controls for visualization parameters
-   - Layer navigation
-   - Training metadata display
-   - Color-coded weights and activations
-
-#### To run the frontend
-
-```
-
-   cd frontend
-   npm install
-   npm run dev
-```
-
-Ngl, most of the cnn code is done with ai, and i think i temporarily broke the dense visualization for now. this needs more work and fixes later.
-
-## Implementation Details
-
-### Data Flow
-
-1. PyTorch model training occurs in the backend
-2. Trainer class captures network state using hooks
-3. Data is formatted and sent via WebSocket
-4. Frontend receives and processes data in real-time
-5. Visualization components update to reflect changes
-
-### Visualization Approach
-
-- **MLPs**: 3D visualization showing:
-  - Neurons as spheres
-  - Connections as lines
-  - Weight values through line thickness/color
-  - Bias values through node size/color
-
-- **CNNs**: 2D visualization showing:
-  - Convolutional filters as heatmaps
-  - Feature maps as activation visualizations
-  - Input images and their transformations
-  - Layer-wise operations and effects
-
-### Technical Considerations
-
-1. **Performance Optimization**
-   - Selective data transmission (first batch item for visualizations)
-   - Efficient WebSocket payload structure
-   - React component optimization
-   - Canvas-based rendering for large networks
-
-2. **Extensibility**
-   - Modular component architecture
-   - Type-safe interfaces
-   - Clear separation of concerns
-   - Pluggable visualization strategies
-
-3. **Developer Experience**
-   - Minimal setup required
-   - Non-intrusive integration with existing PyTorch code
-   - Clear API contract
-   - Comprehensive type definitions
-
-## Next Steps
-
-1. **CNN Support Enhancement**
-   - Add support for more CNN-specific operations
-   - Implement advanced filter visualizations
-   - Add support for modern CNN architectures
-
-2. **Visualization Improvements**
-   - Add animation support for weight updates
-   - Implement more interactive features
-   - Add support for comparing different training runs
-
-3. **Additional Features**
-   - Support for more network architectures
-   - Advanced debugging tools
-   - Performance profiling visualization
-   - Training metrics visualization
-
-## Usage Example
-
-```python
-# Backend (PyTorch model training)
-from synetria import Trainer
-
-# Your PyTorch model
-model = YourModel()
-trainer = Trainer()
-
-# Train with visualization
-await trainer.train(
-    model=model,
-    data_loader=train_loader,
-    criterion=criterion,
-    optimizer=optimizer,
-    num_epochs=5
-)
-```
-
-```typescript
-// Frontend (React component)
-const NeuralNetwork: React.FC = () => {
-  // Visualization logic
-  return (
-    <div className="neural-network-container">
-      {/* Visualization components */}
-    </div>
-  );
-};
-```
-
-The project is designed to be both powerful and approachable, providing valuable insights into neural network behavior while maintaining ease of use. It serves as a bridge between the mathematical complexity of neural networks and the intuitive understanding developers need during the development process.
+[x] - Separate the server into it's own process that runs and streams training information
+[x] - Add Gradcam visualization
+[x] - Restructure the frontend layer layout and cleanup the code
+[x] - SSE instead of websockets for the server
+[x] - Use Instanced mesh to render the feature maps for conv and pooling layers for performance
+[ ] - hover for feature maps
+[ ] - Layout changes, find a place for the gradcam viz.
+[ ] - try compression for the payload. msgpack or gzip.
+[ ] - Sidebar
+   [ ] - Make it collapseable/resizable
+   [ ] - Move the layer controls to a debug gui overlay(lil-gui or lea?)
+   [ ] - Add more detailed layer information
+[ ] - Layer Navigation: Make a navbar that will focus the camera on a specific layer and make it easier to move around. Maybe even move the layers themselves to make them more visible(maybe make the 
+others transparent?)

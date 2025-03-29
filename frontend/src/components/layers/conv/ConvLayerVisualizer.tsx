@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import * as THREE from 'three';
-import { Html, Text } from '@react-three/drei';
 
-import { LayerData, FeatureMap, ConvLayerData } from '../../types';
-import { FeatureMapMesh } from './FeatureMapVisualizer';
+import { LayerData, FeatureMap, ConvLayerData } from '../layers.types';
 import { CamVisualizer } from './CamVisualizer';
-import { jetColormap } from '../../../utils/heatmaps';
+import { viridisColormap } from '../../../utils/heatmaps';
+import LayerInfoTooltip from '../Tooltip';
+import { InstancedFeatureMapMesh } from '../common/InstancedFeatureMapVisualizer';
 
 interface ConvLayerVisualizerProps {
   layer: ConvLayerData;
@@ -17,6 +17,14 @@ interface ConvLayerVisualizerProps {
   inputImageTexture: THREE.Texture | null;
 }
 
+interface Layout {
+  featureMapSize: number;
+  featureMapSpacing: number;
+  featureMapsPerRow: number;
+  layerPosition: [number, number, number];
+  layerColor: string;
+}
+
 const ConvLayerVisualizer: React.FC<ConvLayerVisualizerProps> = ({
   layer,
   layerIndex,
@@ -24,167 +32,90 @@ const ConvLayerVisualizer: React.FC<ConvLayerVisualizerProps> = ({
   colors,
   inputImageTexture,
 }) => {
-  const [hoveredMap, setHoveredMap] = useState<number | null>(null);
-  const layerColor = colors[layerIndex % colors.length];
+  const {
+    layer_name,
+    feature_maps,
+    kernel_size,
+    in_channels,
+    out_channels,
+    cam,
+  } = layer;
 
-  const layerPosition = useMemo<[number, number, number]>(
-    () => [layerIndex * layerSpacing, 0, 0],
-    [layerIndex, layerSpacing]
-  );
-
-  const { feature_maps, kernel_size, in_channels, out_channels, cam } = layer;
-
-  const layoutConfig = useMemo(
+  const layout = useMemo<Layout>(
     () => ({
-      mapSize: 5, // Size of each feature map
-      mapSpacing: 0.8, // Spacing between maps
-      // mapsPerColumn: feature_maps ? feature_maps.length : 0, // Number of maps to display per column
-      mapsPerColumn: feature_maps ? feature_maps.length / 2 : 0,
+      layerColor: colors[layerIndex % colors.length],
+      // layerPosition: [0, 0, -layerIndex * layerSpacing],
+      layerPosition: [-layerIndex * layerSpacing , 0, -layerIndex * layerSpacing],
+      featureMapSize: 5,
+      featureMapSpacing: 0.8,
+      featureMapsPerRow: feature_maps
+        ? Math.ceil(Math.sqrt(feature_maps.length))
+        : 0,
     }),
-    [feature_maps]
+    [layerIndex, layerSpacing, feature_maps, colors]
   );
 
-  // Memoize feature map positions
-  const featureMapPositions = useMemo(() => {
-    const { mapSize, mapSpacing, mapsPerColumn } = layoutConfig;
-
+  const featureMapPositions: [number, number, number][] = useMemo(() => {
     if (!feature_maps || feature_maps.length === 0) return [];
 
-    return (feature_maps as unknown as FeatureMap[]).map((_, mapIndex) => {
-      const column = Math.floor(mapIndex / mapsPerColumn);
-      const row = mapIndex % mapsPerColumn;
+    const columns = layout.featureMapsPerRow;
+    const rows = Math.ceil(feature_maps.length / columns);
+    const totalWidth =
+      columns * layout.featureMapSize +
+      (columns - 1) * layout.featureMapSpacing;
+    const totalHeight =
+      rows * layout.featureMapSize + (rows - 1) * layout.featureMapSpacing;
 
-      const xPos = 0;
-      const yPos =
-        -row * (mapSize + mapSpacing) +
-        (mapsPerColumn * (mapSize + mapSpacing)) / 2 -
-        mapSize;
-      const zPos = column * (mapSize + mapSpacing) - 2;
-
-      return [xPos, yPos, zPos] as [number, number, number];
+    return feature_maps.map((_: FeatureMap, index: number) => {
+      const column = index % layout.featureMapsPerRow;
+      const row = Math.floor(index / layout.featureMapsPerRow);
+      const x =
+        column * (layout.featureMapSize + layout.featureMapSpacing) -
+        totalWidth / 2 +
+        layout.featureMapSize / 2;
+      const y =
+        row * (layout.featureMapSize + layout.featureMapSpacing) -
+        totalHeight / 2 +
+        layout.featureMapSize / 2;
+      return [x, y, 0];
     });
-  }, [feature_maps, layoutConfig]);
+  }, [feature_maps, layout]);
 
-  const handleFeatureMapHover = (isHovered: boolean, index: number) => {
-    setHoveredMap(isHovered ? index : null);
-  };
+  const camPosition = useMemo<[number, number, number]>(() => {
+    // Position CAM to the left of the first feature map
+    // Make sure it's far enough from the layer info tooltip
+    return [-12, 0, 0]; // X: -12 (left side, past the tooltip which is at -8)
+  }, []);
 
   return (
-    <group position={layerPosition}>
+    <group position={layout.layerPosition}>
       {/* Layer label */}
-      <Html position={[0, 8, 0]}>
-        <div
-          style={{
-            background: 'rgba(0,0,0,0.7)',
-            color: 'white',
-            padding: '8px',
-            borderRadius: '4px',
-            fontSize: '14px',
-            fontWeight: 'bold',
-            textAlign: 'center',
-            minWidth: '100px',
-          }}
-        >
-          <div
-            style={{ fontSize: '12px' }}
-          >{`layer : ${layer.layer_name}`}</div>
-          <div style={{ fontSize: '12px' }}>{`type: ${layer.type}`}</div>
-          <div style={{ fontSize: '11px' }}>
-            {kernel_size ? `kernel: ${kernel_size[0]}x${kernel_size[1]}` : ''}
-            {in_channels && out_channels
-              ? `, ${in_channels}→${out_channels}`
-              : ''}
-          </div>
-        </div>
-      </Html>
+      <LayerInfoTooltip position={[-8, 0, 0]}>
+        <div style={{ fontWeight: 'bold' }}>{layer_name}</div>
+        <div>in: {in_channels}</div>
+        <div>out: {out_channels}</div>
+        <div>kernel: {kernel_size}</div>
+      </LayerInfoTooltip>
 
-      {/* Class Activation Map */}
-      {cam && cam.length > 0 && inputImageTexture && (
+      {/* CAM - positioned to the left of feature maps */}
+      {cam && inputImageTexture && (
         <CamVisualizer
-          position={[-5, 0, 0]}
-          inputImageTexture={inputImageTexture}
-          size={layoutConfig.mapSize}
           cam={cam}
+          inputImageTexture={inputImageTexture}
+          size={layout.featureMapSize} // Same size as feature maps
+          position={camPosition}
         />
       )}
 
-      {/* Feature Maps Visualization */}
-      {feature_maps && feature_maps.length > 0 && (
-        <group>
-          {(feature_maps as unknown as FeatureMap[]).map(
-            (featureMap, mapIndex) => (
-              <React.Fragment key={`feature-map-${mapIndex}`}>
-                <FeatureMapMesh
-                  featureMap={featureMap}
-                  position={featureMapPositions[mapIndex]}
-                  size={layoutConfig.mapSize}
-                  color={layerColor}
-                  onHover={handleFeatureMapHover}
-                  index={mapIndex}
-                  isHovered={hoveredMap === mapIndex}
-                  colormap={jetColormap}
-                />
-
-                {/* Hover information tooltip */}
-                {hoveredMap === mapIndex && (
-                  <Html
-                    position={[
-                      featureMapPositions[mapIndex][0],
-                      featureMapPositions[mapIndex][1],
-                      featureMapPositions[mapIndex][2] + 0.1,
-                    ]}
-                  >
-                    <div
-                      style={{
-                        background: 'rgba(0,0,0,0.8)',
-                        color: 'white',
-                        padding: '5px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        pointerEvents: 'none',
-                        transform: 'translate(-50%, -50%)',
-                        width: '120px',
-                        textAlign: 'center',
-                      }}
-                    >
-                      <div>Channel: {featureMap.channel_id}</div>
-                      <div>
-                        Size: {featureMap.activation_map[0].length}x
-                        {featureMap.activation_map.length}
-                      </div>
-                    </div>
-                  </Html>
-                )}
-              </React.Fragment>
-            )
-          )}
-        </group>
-      )}
-
-      {/* If no feature maps are available, show a placeholder */}
-      {(!feature_maps || feature_maps.length === 0) && (
-        <group>
-          <Text
-            position={[0, 0, 0]}
-            fontSize={0.5}
-            color={layerColor}
-            anchorX="center"
-            anchorY="middle"
-          >
-            No feature maps available
-          </Text>
-
-          {/* Placeholder box */}
-          <mesh>
-            <boxGeometry args={[3, 3, 3]} />
-            <meshBasicMaterial
-              color={layerColor}
-              transparent={true}
-              opacity={0.3}
-              wireframe={true}
-            />
-          </mesh>
-        </group>
+      {/* Feature maps */}
+      {feature_maps && (
+        <InstancedFeatureMapMesh
+          featureMaps={feature_maps}
+          mapPositions={featureMapPositions}
+          size={layout.featureMapSize}
+          colormap={viridisColormap}
+          labelColor={layout.layerColor}
+        />
       )}
     </group>
   );
