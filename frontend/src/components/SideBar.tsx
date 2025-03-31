@@ -10,7 +10,7 @@ export const Sidebar: React.FC<{
   modelMetadata: TrainingMetadata;
   trainingParams: TrainingParams;
 }> = ({ modelMetadata, trainingParams, modelStructure }) => (
-  <div className="w-96 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 text-white p-6 shadow-xl">
+  <div className="w-96 bg-linear-to-r from-gray-900 via-gray-800 to-gray-700 text-white p-6 shadow-xl">
     <h2 className="text-2xl font-bold mb-6 text-gray-100">Model Metadata</h2>
     <div className="space-y-4">
       <p>
@@ -99,7 +99,7 @@ export const SliderControls: React.FC<{
   );
 
   return (
-    <div className="w-96 bg-gradient-to-b from-gray-900 via-gray-800 to-gray-700 text-white p-6 shadow-xl">
+    <div className="w-96 bg-linear-to-b from-gray-900 via-gray-800 to-gray-700 text-white p-6 shadow-xl">
       <h3 className="text-xl font-bold mb-6">Adjust Visual Controls</h3>
       <div className="space-y-6">
         <div>
