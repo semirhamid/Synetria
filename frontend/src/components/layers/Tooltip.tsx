@@ -9,18 +9,16 @@ interface TooltipProps {
   maxWidth?: number;
   textColor?: string;
   opacity?: number;
-  glowStrength?: number;
 }
 
 const LayerInfoTooltip: React.FC<TooltipProps> = ({
   children,
   position,
-  background = '#1a1a4f',
-  fontSize = 0.2,
-  maxWidth = 4,
+  background = '#0d0d0d',
+  fontSize = 0.4,
+  maxWidth = 10,
   textColor = '#ffffff',
   opacity = 0.9,
-  glowStrength = 0.2,
 }) => {
   // Convert React children to text content for 3D display
   const textContent = React.Children.toArray(children).map((child) => {
@@ -30,39 +28,17 @@ const LayerInfoTooltip: React.FC<TooltipProps> = ({
     return String(child);
   });
 
+  const width = Math.min(maxWidth, textContent.length * fontSize * 4);
+
   return (
     <group position={[position[0], position[1], position[2] + 2]}>
       <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
-        {/* Outer glow effect */}
-        <mesh position={[0, 0, -0.07]}>
-          <planeGeometry
-            args={[
-              maxWidth + glowStrength,
-              textContent.length * fontSize * 1.5 + 0.4 + glowStrength,
-            ]}
-          />
-          <meshBasicMaterial color="#4488ff" transparent opacity={0.3} />
-        </mesh>
-
         {/* Tooltip background panel */}
         <mesh position={[0, 0, -0.05]}>
           <planeGeometry
-            args={[maxWidth, textContent.length * fontSize * 1.5 + 0.4]}
+            args={[width, textContent.length * fontSize * 1.5 + 0.4]}
           />
           <meshBasicMaterial color={background} transparent opacity={opacity} />
-        </mesh>
-
-        {/* Subtle border for better visibility */}
-        <mesh position={[0, 0, -0.03]}>
-          <boxGeometry
-            args={[maxWidth, textContent.length * fontSize * 1.5 + 0.4, 0.001]}
-          />
-          <meshBasicMaterial
-            color="#5599ff"
-            wireframe={true}
-            transparent
-            opacity={0.7}
-          />
         </mesh>
 
         {/* Render each text line */}

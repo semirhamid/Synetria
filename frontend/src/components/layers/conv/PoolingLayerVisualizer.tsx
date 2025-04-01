@@ -4,6 +4,7 @@ import { PoolingLayerData, LayerData, FeatureMap } from '../layers.types';
 import { InstancedFeatureMapMesh } from '../common/InstancedFeatureMapVisualizer';
 import { jetColormap } from '../../../utils/heatmaps';
 import LayerInfoTooltip from '../Tooltip';
+import { createFeatureMapLayout } from '@/utils/layerLayout';
 
 interface PoolingLayerVisualizerProps {
   layer: PoolingLayerData;
@@ -11,7 +12,6 @@ interface PoolingLayerVisualizerProps {
   nextLayer: LayerData | null;
   layerSpacing: number;
   nodeSize: number;
-  colors: string[];
 }
 
 interface Layout {
@@ -25,21 +25,17 @@ const PoolingLayerVisualizer: React.FC<PoolingLayerVisualizerProps> = ({
   layer,
   layerIndex,
   layerSpacing,
-  colors,
 }) => {
   const { kernel_size, stride, pool_type, feature_maps, layer_name } = layer;
 
   const layout = useMemo<Layout>(
-    () => ({
-      layerColor: colors[layerIndex % colors.length],
-      layerPosition: [-layerIndex * layerSpacing , 0, -layerIndex * layerSpacing],
-      featureMapSize: 5,
-      featureMapSpacing: 0.8,
-      featureMapsPerRow: feature_maps
-        ? Math.ceil(Math.sqrt(feature_maps.length))
-        : 0,
-    }),
-    [layerIndex, layerSpacing, feature_maps, colors]
+    () =>
+      createFeatureMapLayout(
+        layerIndex,
+        layerSpacing,
+        feature_maps?.length || 0
+      ),
+    [layerIndex, layerSpacing, feature_maps]
   );
 
   const featureMapPositions: [number, number, number][] = useMemo(() => {
@@ -68,10 +64,16 @@ const PoolingLayerVisualizer: React.FC<PoolingLayerVisualizerProps> = ({
     });
   }, [feature_maps, layout]);
 
+
+  const tooltipPosition = useMemo<[number, number, number]>(() => {
+    const leftEdge = ((layout.featureMapsPerRow / 2) + 1) * layout.featureMapSize;
+    return [-leftEdge, layout.featureMapSize + 1 / 2, 0];
+  }, [layout.featureMapSize, layout.featureMapsPerRow]);
+
   return (
     <group position={layout.layerPosition}>
       {/* Layer label */}
-      <LayerInfoTooltip position={[-8, 0, 0]}>
+      <LayerInfoTooltip position={tooltipPosition}>
         <div style={{ fontWeight: 'bold' }}>{layer_name}</div>
         <div>type: {layer.type}</div>
         <div>pool type: {pool_type}</div>
@@ -89,7 +91,6 @@ const PoolingLayerVisualizer: React.FC<PoolingLayerVisualizerProps> = ({
           mapPositions={featureMapPositions}
           size={layout.featureMapSize}
           colormap={jetColormap}
-          labelColor={'green'}
         />
       )}
     </group>

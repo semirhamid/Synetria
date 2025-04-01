@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
 
@@ -7,29 +8,22 @@ import { viridisColormap } from '../../../utils/heatmaps';
 import LayerInfoTooltip from '../Tooltip';
 import { InstancedFeatureMapMesh } from '../common/InstancedFeatureMapVisualizer';
 
+import type { FeatureMapLayout } from '@/utils/layerLayout';
+import { createFeatureMapLayout } from '@/utils/layerLayout';
+
 interface ConvLayerVisualizerProps {
   layer: ConvLayerData;
   layerIndex: number;
   nextLayer: LayerData | null;
   layerSpacing: number;
   nodeSize: number;
-  colors: string[];
   inputImageTexture: THREE.Texture | null;
-}
-
-interface Layout {
-  featureMapSize: number;
-  featureMapSpacing: number;
-  featureMapsPerRow: number;
-  layerPosition: [number, number, number];
-  layerColor: string;
 }
 
 const ConvLayerVisualizer: React.FC<ConvLayerVisualizerProps> = ({
   layer,
   layerIndex,
   layerSpacing,
-  colors,
   inputImageTexture,
 }) => {
   const {
@@ -41,18 +35,14 @@ const ConvLayerVisualizer: React.FC<ConvLayerVisualizerProps> = ({
     cam,
   } = layer;
 
-  const layout = useMemo<Layout>(
-    () => ({
-      layerColor: colors[layerIndex % colors.length],
-      // layerPosition: [0, 0, -layerIndex * layerSpacing],
-      layerPosition: [-layerIndex * layerSpacing , 0, -layerIndex * layerSpacing],
-      featureMapSize: 5,
-      featureMapSpacing: 0.8,
-      featureMapsPerRow: feature_maps
-        ? Math.ceil(Math.sqrt(feature_maps.length))
-        : 0,
-    }),
-    [layerIndex, layerSpacing, feature_maps, colors]
+  const layout = useMemo<FeatureMapLayout>(
+    () =>
+      createFeatureMapLayout(
+        layerIndex,
+        layerSpacing,
+        feature_maps?.length || 0
+      ),
+    [layerIndex, layerSpacing, feature_maps]
   );
 
   const featureMapPositions: [number, number, number][] = useMemo(() => {
@@ -82,15 +72,19 @@ const ConvLayerVisualizer: React.FC<ConvLayerVisualizerProps> = ({
   }, [feature_maps, layout]);
 
   const camPosition = useMemo<[number, number, number]>(() => {
-    // Position CAM to the left of the first feature map
-    // Make sure it's far enough from the layer info tooltip
-    return [-12, 0, 0]; // X: -12 (left side, past the tooltip which is at -8)
-  }, []);
+    const leftEdge = ((layout.featureMapsPerRow / 2) + 1) * layout.featureMapSize;
+    return [-leftEdge, 0, 0];
+  }, [layout.featureMapSize, layout.featureMapsPerRow]);
+
+  const tooltipPosition = useMemo<[number, number, number]>(() => {
+    const leftEdge = ((layout.featureMapsPerRow / 2) + 1) * layout.featureMapSize;
+    return [-leftEdge, layout.featureMapSize + 1 / 2, 0];
+  }, [layout.featureMapSize, layout.featureMapsPerRow]);
 
   return (
     <group position={layout.layerPosition}>
       {/* Layer label */}
-      <LayerInfoTooltip position={[-8, 0, 0]}>
+      <LayerInfoTooltip position={tooltipPosition}>
         <div style={{ fontWeight: 'bold' }}>{layer_name}</div>
         <div>in: {in_channels}</div>
         <div>out: {out_channels}</div>
@@ -114,7 +108,6 @@ const ConvLayerVisualizer: React.FC<ConvLayerVisualizerProps> = ({
           mapPositions={featureMapPositions}
           size={layout.featureMapSize}
           colormap={viridisColormap}
-          labelColor={layout.layerColor}
         />
       )}
     </group>

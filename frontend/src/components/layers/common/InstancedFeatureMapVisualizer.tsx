@@ -11,7 +11,6 @@ interface InstancedFeatureMapMeshProps {
   featureMaps: FeatureMap[];
   mapPositions: [number, number, number][];
   size: number;
-  labelColor: string;
   colormap: (value: number) => [number, number, number];
   onHover?: (isHovered: boolean, index: number) => void;
 }

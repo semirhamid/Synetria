@@ -39,8 +39,8 @@ const useNeuralNetworkData = (): NeuralNetworkData => {
 
   useEffect(() => {
     // Mock Data for dev. 
-    processWebSocketData(mockData as unknown as TrainingData);
-    return;
+    // processWebSocketData(mockData as unknown as TrainingData);
+    // return;
 
     // Using Server Sent Events instead of websockets for (slight) performance gains.
     const eventSource = new EventSource('http://localhost:8000/stream');
