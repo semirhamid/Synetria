@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 
 import { PoolingLayerData, LayerData, FeatureMap } from '../layers.types';
-import { InstancedFeatureMapMesh } from '../common/InstancedFeatureMapVisualizer';
+import { InstancedFeatureMapMesh } from '../common/featureMap/InstancedFeatureMapVisualizer';
 import { jetColormap } from '../../../utils/heatmaps';
-import LayerInfoTooltip from '../Tooltip';
+import LayerInfoTooltip from '../common/tooltip/Tooltip';
 import { createFeatureMapLayout } from '@/utils/layerLayout';
 
 interface PoolingLayerVisualizerProps {

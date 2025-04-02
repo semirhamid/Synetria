@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Line } from '@react-three/drei';
-import LayerInfoTooltip from '../Tooltip';
+import LayerInfoTooltip from '../common/tooltip/Tooltip';
 
 interface EdgeProps {
   sourcePosition: [number, number, number];

@@ -5,7 +5,7 @@ import { Instance, Instances } from '@react-three/drei';
 import * as THREE from 'three';
 import Edge from './Edge';
 import BatchedEdges from './BatchedEdges';
-import LayerInfoTooltip from '../Tooltip';
+import LayerInfoTooltip from '../common/tooltip/Tooltip';
 import type { NeuronLayout } from '@/utils/layerLayout';
 import { createNeuronLayout } from '@/utils/layerLayout';
 

@@ -4,9 +4,9 @@ import * as THREE from 'three';
 
 import { LayerData, FeatureMap, ConvLayerData } from '../layers.types';
 import { CamVisualizer } from './CamVisualizer';
-import { viridisColormap } from '../../../utils/heatmaps';
-import LayerInfoTooltip from '../Tooltip';
-import { InstancedFeatureMapMesh } from '../common/InstancedFeatureMapVisualizer';
+import { viridisColormap } from '@/utils/heatmaps';
+import LayerInfoTooltip from '../common/tooltip/Tooltip';
+import { InstancedFeatureMapMesh } from '../common/featureMap/InstancedFeatureMapVisualizer';
 
 import type { FeatureMapLayout } from '@/utils/layerLayout';
 import { createFeatureMapLayout } from '@/utils/layerLayout';

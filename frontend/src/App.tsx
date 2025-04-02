@@ -7,7 +7,7 @@ import './index.css';
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
-      <div className="canvas-container w-full h-screen p-0">
+      <div className="canvas-container w-full h-screen p-0 m-0">
         <NeuralNetwork />
       </div>
     </ErrorBoundary>

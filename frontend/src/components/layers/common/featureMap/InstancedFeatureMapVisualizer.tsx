@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 
-import { FeatureMap } from '../layers.types';
-import LayerInfoTooltip from '../Tooltip';
+import { FeatureMap } from '../../layers.types';
+import LayerInfoTooltip from '../tooltip/Tooltip';
 
-import vertexShader from './shaders/featureMap/vertex.glsl';
-import fragmentShader from './shaders/featureMap/fragment.glsl';
+import vertexShader from './shaders/vertex.glsl';
+import fragmentShader from './shaders/fragment.glsl';
 
 interface InstancedFeatureMapMeshProps {
   featureMaps: FeatureMap[];
@@ -91,14 +91,13 @@ const InstancedFeatureMapMesh = React.memo(
 
       // Replace the old texture
       const oldTextureAtlas = textureAtlasRef.current;
+      if (oldTextureAtlas) oldTextureAtlas.dispose();
 
       textureAtlasRef.current = newTextureAtlas;
       if (materialRef.current) {
         materialRef.current.uniforms.textureAtlas.value = newTextureAtlas;
         materialRef.current.needsUpdate = true;
       }
-
-      if (oldTextureAtlas) oldTextureAtlas.dispose();
     }, [featureMaps, colormap]);
 
     // Set the positions of the feature map instances.
@@ -152,6 +151,7 @@ const InstancedFeatureMapMesh = React.memo(
     return (
       <group>
         <instancedMesh
+          dispose={null}
           args={[instanceGeometry, instanceMaterial, featureMaps.length]}
           count={featureMaps.length}
           ref={meshRef}

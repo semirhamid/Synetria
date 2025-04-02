@@ -93,17 +93,17 @@ def load_cnn_example():
             transforms.ToTensor(),
         ]
     )
-    # hello world, watup. hello world, whatup, hello baby guess who back, i know you miss me.
     # Data
     data = datasets.MNIST(root="./data", train=True, download=True, transform=transform)
     # data = datasets.CIFAR10(root="./data", train=True, download=True, transform=transform)
+    # data = datasets.CIFAR100(root="./data", train=True, download=True, transform=transform)
 
     # Models
-    model = LeNetBasedModel(in_channels=3, num_classes=len(data.classes))
+    # model = LeNetBasedModel(in_channels=3, num_classes=len(data.classes))
     # model = VGGInspiredCNN(in_channels=3, num_classes=len(data.classes))
     
-    # model = models.resnet18(pretrained=True)
-    # model.fc = torch.nn.Linear(model.fc.in_features, len(data.classes))
+    model = models.resnet18(pretrained=True)
+    model.fc = torch.nn.Linear(model.fc.in_features, len(data.classes))
 
     logger.info(f"Model created: {model.__class__.__name__}")
 

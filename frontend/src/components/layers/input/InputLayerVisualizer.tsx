@@ -1,7 +1,7 @@
 import React from 'react';
 import * as THREE from 'three';
 import { NetworkInput } from '../../types';
-import LayerInfoTooltip from '../Tooltip';
+import LayerInfoTooltip from '../common/tooltip/Tooltip';
 
 interface InputLayerVisualizerProps {
   inputData: NetworkInput;
@@ -15,7 +15,7 @@ export const InputLayerVisualizer: React.FC<InputLayerVisualizerProps> = ({
   texture,
 }) => {
   // Default dimensions
-  const maxDimension = 4;
+  const maxDimension = 20;
 
   if (!inputData) {
     return null;

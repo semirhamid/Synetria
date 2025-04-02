@@ -5,7 +5,7 @@ export interface FeatureMap {
 }
 
 export interface BaseLayerData {
-  metadata: BaseLayerMetaData; // Static base information about the layer.
+  metadata: BaseLayerMetaData; // Static base information about the layer. - UNUSED
   layer_name: string;
   type: string;
   input_shape?: number[];

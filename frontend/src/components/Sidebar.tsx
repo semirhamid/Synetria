@@ -66,9 +66,9 @@ export function ModelSidebarWrapper({
         <SidebarInset className="flex-1">
           <div className="flex h-16 items-center border-b px-4">
             <SidebarTrigger className="mr-4" />
-            <h1 className="text-xl font-semibold">
+            {/* <h1 className="text-xl font-semibold">
               Neural Network Visualization
-            </h1>
+            </h1> */}
           </div>
           <div className="flex h-screen w-full">{children}</div>
         </SidebarInset>

@@ -24,7 +24,7 @@ import ConvLayerVisualizer from './layers/conv/ConvLayerVisualizer';
 import PoolingLayerVisualizer from './layers/conv/PoolingLayerVisualizer';
 import InputLayerVisualizer from './layers/input/InputLayerVisualizer';
 import { createTextureFromImg } from '../utils/visualization3d';
-import { ModelSidebarWrapper } from './model-sidebar';
+import { ModelSidebarWrapper } from './Sidebar';
 
 const NeuralNetwork: React.FC = () => {
   const {
@@ -50,7 +50,6 @@ const NeuralNetwork: React.FC = () => {
   if (!layerData || !trainingMetadata || !trainingParams || !modelStructure)
     return <LoadingComponent />;
 
-  // Function to render the correct layer component based on layer type
   const renderLayerComponent = (
     layer: LayerData,
     layerIndex: number,
@@ -103,23 +102,6 @@ const NeuralNetwork: React.FC = () => {
 
   return (
     <div className="flex overflow-y-hidden max-h-screen">
-      {/* Sidebar - Legacy */}
-      {/* <section className="overflow-scroll overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-gray-300 no-scrollbar">
-        <Sidebar
-          modelStructure={modelStructure}
-          trainingParams={trainingParams}
-          modelMetadata={trainingMetadata}
-        />
-        <SliderControls
-          layerSpacing={layerSpacing}
-          setLayerSpacing={setLayerSpacing}
-          neuronSpacing={neuronSpacing}
-          setNeuronSpacing={setNeuronSpacing}
-          nodeSize={nodeSize}
-          setNodeSize={setNodeSize}
-        />
-      </section> */}
-
       {/* Neural Network Visualization */}
       <ModelSidebarWrapper
         modelStructure={modelStructure}
