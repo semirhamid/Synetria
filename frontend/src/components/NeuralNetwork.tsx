@@ -19,14 +19,12 @@ import {
 
 import LoadingComponent from './LoadingComponent';
 import useNeuralNetworkData from '../hooks/useNeuralNetworkData';
-// import { Sidebar, SliderControls } from './SideBar';
 import DenseLayerVisualizer from './layers/dense/DenseLayerVisualizer';
 import ConvLayerVisualizer from './layers/conv/ConvLayerVisualizer';
 import PoolingLayerVisualizer from './layers/conv/PoolingLayerVisualizer';
 import InputLayerVisualizer from './layers/input/InputLayerVisualizer';
 import { createTextureFromImg } from '../utils/visualization3d';
 import { ModelSidebarWrapper } from './model-sidebar';
-
 
 const NeuralNetwork: React.FC = () => {
   const {
@@ -105,7 +103,7 @@ const NeuralNetwork: React.FC = () => {
 
   return (
     <div className="flex overflow-y-hidden max-h-screen">
-      {/* Sidebar */}
+      {/* Sidebar - Legacy */}
       {/* <section className="overflow-scroll overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-gray-300 no-scrollbar">
         <Sidebar
           modelStructure={modelStructure}
@@ -137,10 +135,9 @@ const NeuralNetwork: React.FC = () => {
         <div className="flex-1 max-h-screen max-w-full w-full">
           <Canvas
             camera={{ fov: 50, position: [-10, 0, 50] }}
-            // style={{ background: '#0d0d0d' }}
             style={{ background: '#c0c0c0' }}
           >
-            <axesHelper args={[100]} />
+            {/* <axesHelper args={[100]} /> */}
             <Perf />
             <OrbitControls enableDamping dampingFactor={0.1} />
             <ambientLight intensity={0.5} />

@@ -3,13 +3,13 @@ import { ChevronDown, Layers, Settings } from 'lucide-react';
 import debounce from 'lodash.debounce';
 
 import type { ModelStructure, TrainingMetadata, TrainingParams } from './types';
+import { Progress } from '@/components/ui/progress';
+import { Slider } from '@/components/ui/slider';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { Progress } from '@/components/ui/progress';
-import { Slider } from '@/components/ui/slider';
 import {
   Sidebar,
   SidebarContent,
@@ -70,7 +70,7 @@ export function ModelSidebarWrapper({
               Neural Network Visualization
             </h1>
           </div>
-          <div className="flex h-screen w-full p-6">{children}</div>
+          <div className="flex h-screen w-full">{children}</div>
         </SidebarInset>
       </div>
     </SidebarProvider>
@@ -111,7 +111,7 @@ function ModelSidebarContent({
   return (
     <Sidebar
       className="border-r border-border bg-gradient-to-b from-background to-background/80 backdrop-blur-sm"
-      collapsible="icon"
+      collapsible="offcanvas"
     >
       <SidebarHeader className="px-4 py-3">
         <div className="flex items-center gap-2">
@@ -140,8 +140,8 @@ function ModelSidebarContent({
                 <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
               </CollapsibleTrigger>
             </SidebarGroupLabel>
-            <CollapsibleContent>
-              <SidebarGroupContent>
+            <SidebarGroupContent>
+              <CollapsibleContent>
                 <div className="space-y-3 rounded-md bg-card p-3 text-sm shadow-sm">
                   <div className="grid grid-cols-2 gap-2">
                     <div className="text-muted-foreground">Total Layers:</div>
@@ -168,8 +168,8 @@ function ModelSidebarContent({
                     </div>
                   </div>
                 </div>
-              </SidebarGroupContent>
-            </CollapsibleContent>
+              </CollapsibleContent>
+            </SidebarGroupContent>
           </SidebarGroup>
         </Collapsible>
 

@@ -7,8 +7,9 @@ import json
 import ujson
 import zmq
 
+import time
 import logging
-import asyncio  # added for asynchronous offloading
+import asyncio  
 from typing import Dict, List, Any, Tuple
 
 # Set up logging
@@ -83,7 +84,7 @@ class Trainer:
                 loss.backward()
                 self.optimizer.step()
 
-                if batch_idx % 100 == 0:
+                if batch_idx % 20 == 0:
                     logger.info(
                         f"Train Epoch: {epoch+1}/{self.num_epochs}"
                         + f"[{batch_idx * len(inputs)}/{len(data_loader.dataset)}"
@@ -112,6 +113,7 @@ class Trainer:
         """
         Prepare and send training data via ZeroMQ.
         """
+        time_start = time.perf_counter()
 
         training_data = {
             "parameters": {
@@ -133,7 +135,9 @@ class Trainer:
         cams = self._get_gradcam_activations(self.conv_layers)
         self._add_layer_data(self.activations, training_data, cams)
         try:  # Send data via ZeroMQ without blocking the main thread
-            await asyncio.to_thread(self._transmit_data, training_data)  # changed code
+            time_end = time.perf_counter()
+            logger.info(f"Data serialization took {time_end - time_start} seconds")
+            await asyncio.to_thread(self._transmit_data, training_data)  
         except Exception as e:
             logger.error(f"Error sending data via ZeroMQ: {e}")
 
