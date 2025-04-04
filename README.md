@@ -1,129 +1,170 @@
+# Synetria: Real-Time Neural Network Visualizer
 
-# Neural-Network-3D-Visualizer
+Synetria is a tool designed for real-time, interactive 3D visualization of neural network training processes, currently supporting Multilayer Perceptrons (MLPs) and Convolutional Neural Networks (CNNs). The primary goal is to provide developers and researchers with insights into their PyTorch models during training.
 
-The current version of the project is an early prototype, that mainly includes visualization for a multi-layer perceptron network. The plan is to expand this to include a wide range of networks, and have the project serve as a wrapper or a plugin to normal model training using pytorch. The functionality is aimed at developers, who are creating and training their own models for their own usecases, and it should help provide insights and help the development process. As such, we want to make this as useful as possible in that regard. The backend, in the end, should be easily integratable with pytorch, and it should run a websocket connection to stream the model information (epoch progress, layer insights using pytorch hooks, etc...) during the training process. The frontend should use a visual medium, currently we have decided on three.js(React three fiber), to communicate this information in the most useful way, in the simplest and most intuitive way. It should also be runnable for testing, but that will be added at the end phases of the project.
+The backend integrates with PyTorch, using hooks to capture layer-specific information (weights, activations, gradients) during training epochs. It employs ZeroMQ for efficient inter-process communication between the training process and the server process, which then streams this data to the frontend via Server-Sent Events (SSE). The frontend, built with React and Three.js (using React Three Fiber), renders the network structure and training dynamics in an interactive 3D environment.
 
-Next step is to add CNN support to the network. That means supporting convolution, pooling and normalization layers (among other things). We should also support showing the image the cnn is training on or trying to classify.
-
-**Neural-Network-3D-Visualizer** is an interactive 3D visualization tool for exploring the structure and weights of a Multilayer Perceptron (MLP) neural network. Built using Python (for generating and training data) and Three.js (for rendering a 3D graph), this tool provides an engaging way to visualize and interact with the structure and dynamics of neural networks.
+Next step is to enhance CNN support, add more visualization options (like CAMs, feature map inspection), and refine the PyTorch integration to work seamlessly as a plugin or wrapper. We also aim to further improve the performance of the system, ensuring that the visualization is smooth and responsive even for large models and datasets without slowing down the training process.
 
 ## 🌟 Features
 
-- **Flexible Neural Network Configuration**  
-  Supports any number of simple linear layers and neurons, enabling dynamic customization.  
-  ![Image showcasing flexibility](https://github.com/user-attachments/assets/a785c650-5076-463b-be7f-731319d3bb02)
-
-- **Interactive Environment Control**  
-  Adjust the layer width, neuron spacing, and other properties of the visualization for an intuitive experience.  
-  ![Image showcasing control features](https://github.com/user-attachments/assets/bac494e4-a902-423d-8e3b-138a56807253)
-
-- **Spacious Display Area**  
-  A large rendering space for exploring and interacting with even the most complex network structures.  
-![image](https://github.com/user-attachments/assets/a0cd7dd6-7612-40ce-a3fd-ae1626d7653d)
+- **Real-Time Training Visualization**: Observe weights, activations (planned), and other metrics as the model trains.
+- **Support for MLP & CNN Architectures**: Visualize both simple feedforward networks and convolutional networks.
+- **Flexible Network Configuration**: Adapts to different layer counts, neuron/channel numbers, and network parameters.
+- **Interactive 3D Environment**: Use React Three Fiber for smooth navigation and inspection of the network graph.
+- **Component-Based Frontend**: Easily extendable UI built with React and TypeScript.
+- **Decoupled Backend Architecture**: Uses ZeroMQ for robust inter-process communication between the trainer and the client-facing server.
 
 ---
 
 ## 🗂️ Project Structure
 
-The repository is organized into **backend** and **frontend** directories to separate concerns:
+The repository is organized into `backend` and `frontend` directories.
 
-### **Backend**  
+### **Backend** (`backend/`)
 
-Contains the core logic for defining and training the neural network using PyTorch and for handling server-side communication:  
+Handles model definition, training loop execution, data extraction, and communication with the frontend.
 
-- **`models/`**  
-  - `simple_nn.py`: Implements a simple feedforward neural network using PyTorch.  
+- **`main.py`**: Entry point for the backend application. Parses command-line arguments, loads datasets (e.g., MNIST for CNNs, synthetic data for MLPs) and models (e.g., SimpleNN, ResNet18), initializes the `TrainingManager`.
+- **`app/`**: Core application logic.
+    - **`server/`**:
+        - **`training_manager.py`**: Orchestrates the training. Starts the trainer and client manager processes and facilitates communication between them using ZeroMQ.
+        - **`client_manager.py`** (Conceptual): Manages client connections (via FastAPI and SSE) and forwards data received from the trainer via ZeroMQ.
+        - **`trainer.py`** (Conceptual): Runs the PyTorch training loop, extracts model data (weights, gradients, etc.) at each step, and sends it to the `client_manager` via ZeroMQ.
+    - **`models/`**: PyTorch model definitions.
+        - **`simple_nn.py`**: Defines a basic MLP.
+        - **`cnn.py`**: Defines various CNN architectures (e.g., `LeNetBasedModel`, `VGGInspiredCNN`). Note: `main.py` currently uses `torchvision.models.resnet18`.
+    - **`utils/`**: Utility functions (e.g., data formatting - conceptual).
+- **`data/`**: Default directory for downloading datasets (e.g., MNIST, CIFAR).
+- **`requirements.txt`**: Lists Python dependencies (PyTorch, Torchvision, FastAPI, Uvicorn, ZeroMQ, etc.).
 
-    ```python
-    import torch
-    import torch.nn as nn
-    
-    class SimpleNN(nn.Module):
-        def __init__(self):
-            super(SimpleNN, self).__init__()
-            self.fc1 = nn.Linear(3, 8)
-            self.fc2 = nn.Linear(8, 4)
-            self.fc3 = nn.Linear(4, 2)
-    
-        def forward(self, x):
-            x = torch.relu(self.fc1(x))
-            x = torch.relu(self.fc2(x))
-            x = self.fc3(x)
-            return x
-    ```
+**Key Technologies:** Python, PyTorch, FastAPI, Uvicorn, ZeroMQ (pyzmq), asyncio.
 
-- **`services/`**  
-  - `model_service.py`: Provides APIs for training and predicting with the neural network.  
-  - `trainer.py`: Handles the training logic for the MLP model.  
+### **Frontend** (`frontend/`)
 
-- **`utils/`**  
-  - `data_formatter.py`: Prepares data for training and testing.  
+Renders the 3D visualization and handles user interaction, receiving real-time data from the backend via SSE.
 
-- **`websockets/`**  
-  - `client_handler.py`: Manages WebSocket communication between the backend and frontend.  
-  - `server.py`: Runs the WebSocket server to enable real-time updates.
+- **`src/`**: Main source code directory.
+    - **`components/`**: Reusable React components.
+        - **`NeuralNetwork.tsx`**: The core component responsible for orchestrating the 3D visualization using React Three Fiber.
+        - **`layers/`**: Components specific to rendering different layer types (Dense, Conv2D, Pooling).
+        - **`Node.tsx`, `Edge.tsx`**: Components for rendering individual neurons and their connections (primarily for MLPs).
+        - **`SideBar.tsx`**: UI panel for controls and information display.
+        - **`types.ts`**: Defines core TypeScript interfaces for data structures (`TrainingData`, `ModelStructure`, etc.).
+        - **`layers/layers.types.ts`**: Defines TypeScript interfaces for specific layer data (`DenseLayerData`, `ConvLayerData`, `PoolingLayerData`, etc.).
+    - **`hooks/`**: Custom React hooks (e.g., `useEventSource` for handling SSE connection).
+    - **`services/`**: Modules for interacting with the backend API/SSE endpoint.
+    - **`utils/`**: Utility functions and constants.
+- **`public/`**: Static assets (e.g., `index.html`).
+- **`package.json`**: Project metadata, dependencies (React, Three.js, R3F, Zustand, Tailwind CSS, etc.), and scripts (`dev`, `build`).
+- **`vite.config.ts`**: Build configuration for Vite.
+- **`tailwind.config.js`**: Configuration for Tailwind CSS.
 
-### **Frontend**
+**Key Technologies:** TypeScript, React, Three.js, React Three Fiber (@react-three/fiber), Drei (@react-three/drei), Zustand (state management), Tailwind CSS, Vite, Server-Sent Events (SSE).
 
-Focuses on rendering the 3D visualization and enabling user interactions:  
+---
 
-- **`assets/`**  
-  - Houses resources like stylesheets and configuration files.  
+## API Contract: Server-Sent Events (SSE) Data Payload
 
-- **`components/`**  
-  - `Edge.tsx`: Renders connections (edges) between neurons in the network.  
-  - `NeuralNetwork.tsx`: The main component for visualizing the neural network structure.  
-  - `Node.tsx`: Represents individual neurons in the visualization.  
-  - `SideBar.tsx`: Provides controls for interacting with the visualization.  
-  - `styles.ts`: Contains styling configurations for the components.  
-  - `types.ts`: Defines TypeScript types for the neural network.  
+The backend streams training data to the frontend using SSE. Each message is a JSON object containing a snapshot of the training state for a given step (e.g., after a batch).
 
-- **`utils/`**  
-  - `calculations.ts`: Includes utility functions for calculations related to 3D rendering.  
-  - `constants.ts`: Contains reusable constants for the application.  
+### **Payload Structure (`TrainingData`)**
 
-### Additional Files
+```typescript
+// Based on frontend/src/components/types.ts
+interface TrainingData {
+  metadata: TrainingMetadata;      // Info about the current training step
+  parameters: TrainingParams;      // Static parameters for the training run
+  model_structure: ModelStructure; // Overall structure of the model
+  network_input: NetworkInput;     // Example input data being processed
+  layers: LayerData[];             // Detailed data for each layer in the model
+}
 
-- **`vite.config.ts`**: Configuration for Vite, the frontend build tool.  
-- **`tailwind.config.js`**: Tailwind CSS configuration for styling.  
-- **`requirements.txt`**: Lists Python dependencies for the backend.  
-- **`package.json`**: Contains dependencies and scripts for the frontend.  
+// ---- Supporting Interfaces ----
 
-## API Contract: WebSocket Training Data Payload
+interface TrainingMetadata {
+  epoch: number;              // Current epoch number (1-indexed)
+  batch: number;              // Current batch number within the epoch (1-indexed)
+  loss: number;               // Loss value for the current step
+}
 
-This document outlines the structure and rules for the WebSocket payload sent during the training process. Developers can use this information to extend the functionality of the system without breaking existing features.
+interface TrainingParams {
+  total_epochs: number;       // Total number of epochs for the training run
+  learning_rate: number;      // Current learning rate
+  batch_size: number;         // Number of samples per batch
+}
 
-### **Payload Overview**
+interface ModelStructure {
+  total_layers: number;     // Total number of layers in the model
+  total_params: number;     // Total number of trainable parameters
+  layer_details: {          // Basic info about each layer (name, sizes)
+    layer_name: string;
+    input_size: number;     // Note: Size might be ambiguous for CNNs (use input_shape/output_shape in LayerData)
+    output_size: number;    // Note: Size might be ambiguous for CNNs (use input_shape/output_shape in LayerData)
+  }[];
+}
 
-The WebSocket sends a JSON object for each training step, containing metadata about the training process, model structure, and layer details. This payload is structured as follows:
+interface NetworkInput {
+  type: string;             // Type of input (e.g., 'image', 'vector')
+  data: number[][][];       // Actual input data sample(s) [batch?, channels, height, width] or [batch?, features]
+}
 
-```json
-{
-  "epoch": <integer>,              // Current epoch number (1-indexed)
-  "batch": <integer>,              // Current batch number (1-indexed)
-  "loss": <float>,                 // Current loss value
-  "learning_rate": <float>,        // Current learning rate
-  "batch_size": <integer>,         // Number of samples in the current batch
-  "model_structure": {             // Metadata about the model
-    "total_layers": <integer>,     // Total number of layers
-    "total_params": <integer>,     // Total number of trainable parameters
-    "total_epochs": <integer>,     // Total number of epochs
-    "layer_details": [             // Details of each layer
-      {
-        "layer_name": <string>,    // Name of the layer
-        "input_size": <integer>,   // Input size of the layer
-        "output_size": <integer>   // Output size of the layer
-      }
-    ]
-  },
-  "layers": [                      // Training details for each layer
-    {
-      "layer": <string>,           // Name of the parameter (e.g., "fc1.weight")
-      "weights": <array>,          // Current weights of the parameter
-      "gradients": <array|null>,   // Gradients of the parameter (if available)
-      "biases": <array>            // Bias values (if applicable)
-    }
-  ]
+// LayerData is a union type. See details below.
+type LayerData = DenseLayerData | ConvLayerData | PoolingLayerData; // (Potentially others)
+
+```
+
+### **Layer Data Details (`LayerData`)**
+
+The `layers` array contains objects specific to each layer type, identified by the `type` field.
+
+```typescript
+// Based on frontend/src/components/layers/layers.types.ts
+
+// Common fields for all layers (BaseLayerData)
+interface BaseLayerData {
+  layer_name: string;        // Name of the layer (e.g., "fc1", "conv2")
+  type: string;              // Type identifier (e.g., "linear", "conv2d", "maxpool2d")
+  input_shape?: number[];    // Shape of the input tensor [channels, height, width] or [features]
+  output_shape?: number[];   // Shape of the output tensor
+}
+
+// ---- Specific Layer Types ----
+
+interface DenseLayerData extends BaseLayerData {
+  type: 'linear' | 'dense';
+  weights: number[][];       // Weight matrix [output_neurons, input_neurons]
+  biases: number[];          // Bias vector [output_neurons]
+  activations: number[];     // Activation values for this layer's output [output_neurons]
+  gradients?: number[][];    // Gradients of the weights (optional)
+}
+
+interface ConvLayerData extends BaseLayerData {
+  type: 'conv' | 'conv2d' | 'convolution';
+  kernel_size: [number, number]; // [height, width]
+  stride: [number, number];      // [height, width]
+  padding: [number, number];     // [height, width]
+  in_channels?: number;          // Number of input channels
+  out_channels?: number;         // Number of output channels (filters)
+  filters: number[][][][];       // Filter weights [out_channel, in_channel, kernel_height, kernel_width]
+  feature_maps?: FeatureMap[];   // Output activation maps (optional)
+  cam?: number[][];              // Class Activation Map (optional)
+}
+
+interface PoolingLayerData extends BaseLayerData {
+  type: 'pool' | 'maxpool' | 'avgpool' | 'maxpool2d' | 'avgpool2d';
+  pool_type: 'max' | 'avg';      // Type of pooling
+  kernel_size: [number, number]; // [height, width]
+  stride: [number, number];      // [height, width]
+  padding?: [number, number];    // [height, width] (Optional)
+  feature_maps?: FeatureMap[];   // Output activation maps (optional)
+}
+
+// ---- FeatureMap Structure ----
+interface FeatureMap {
+  channel_id: number;            // Index of the output channel this map belongs to
+  activation_map: number[][];    // The 2D activation map data
+  shape: [number, number];       // [height, width]
 }
 
 ```
@@ -134,37 +175,64 @@ The WebSocket sends a JSON object for each training step, containing metadata ab
 
 ### Backend
 
-1. Install dependencies:
+1.  Navigate to the `backend` directory:
+    ```bash
+    cd backend
+    ```
+2.  Create a virtual environment (optional but recommended):
+    ```bash
+    python -m venv venv
+    source venv/bin/activate # Linux/macOS
+    # .\venv\Scripts\activate # Windows
+    ```
+3.  Install dependencies:
+    ```bash
+    pip install -r requirements.txt
+    ```
+4.  Run the backend server:
+    ```bash
+    # Example: Run with default settings (CNN model, localhost:8000, ZMQ on 5555)
+    python main.py
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+    # Example: Run MLP model
+    python main.py --model mlp
 
-2. Run the WebSocket server:
+    # Example: Specify host/port
+    python main.py --host 0.0.0.0 --port 8080 --zmq-port 5556
+    ```
+    Available arguments:
+    - `--host`: Host for the SSE server (default: `localhost`).
+    - `--port`: Port for the SSE server (default: `8000`).
+    - `--zmq-port`: Port for ZeroMQ IPC (default: `5555`).
+    - `--model`: Type of model to train (`cnn` or `mlp`, default: `cnn`).
 
-   ```bash
-   python main.py
-   ```
+    The server will start, initialize the model and data, and begin the training process, waiting for frontend connections on the specified host/port.
 
 ### Frontend
 
-1. Install dependencies:
+1.  Navigate to the `frontend` directory:
+    ```bash
+    cd frontend
+    ```
+2.  Install dependencies:
+    ```bash
+    yarn install
+    # or: npm install
+    ```
+3.  Start the development server:
+    ```bash
+    yarn dev
+    # or: npm run dev
+    ```
+4.  Open your web browser and navigate to the URL provided by Vite (usually `http://localhost:5173`).
 
-   ```bash
-   yarn install
-   ```
-
-2. Start the development server:
-
-   ```bash
-   yarn dev
-   ```
+The frontend will connect to the backend's SSE endpoint (defaults to `ws://localhost:8000/stream`) and start visualizing the network and training updates.
 
 ---
 
 ## 💡 Contributing
 
-Feel free to open issues or submit pull requests. All contributions are welcome to enhance the features and usability of **MLP-Visualizer-3D**.
+Contributions are welcome! Feel free to open issues for bugs or feature requests, or submit pull requests to improve Synetria. Please adhere to standard coding practices and ensure your changes are well-tested.
 
 ---
 
