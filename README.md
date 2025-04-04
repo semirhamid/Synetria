@@ -14,8 +14,11 @@ Next step is to enhance CNN support, add more visualization options (like CAMs, 
 - **Interactive 3D Environment**: Use React Three Fiber for smooth navigation and inspection of the network graph.
 - **Component-Based Frontend**: Easily extendable UI built with React and TypeScript.
 - **Decoupled Backend Architecture**: Uses ZeroMQ for robust inter-process communication between the trainer and the client-facing server.
+- **Model Support and Usage**: The visualization tool runs on any model architecture, with our package acting as a wrapper for the training process.
 
 ---
+![Screenshot 2025-04-04 104601](https://github.com/user-attachments/assets/cf3359df-2dfc-48cd-910d-69fe661e8a2a)
+![Screenshot 2025-04-04 101357](https://github.com/user-attachments/assets/72aa7c5a-52b5-440d-9fec-c03e168f8b4b)
 
 ## 🗂️ Project Structure
 
